@@ -150,7 +150,7 @@ thread_tick (void)
     kernel_ticks++;
 
   /* Enforce preemption. */
-  if (++thread_ticks >= TIME_SLICE)
+  if ((++thread_ticks >= TIME_SLICE))
     intr_yield_on_return ();
 }
 
@@ -223,6 +223,10 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+
+  if(t->priority > thread_current()->priority){
+    thread_yield();
+  }
 
   return tid;
 }
@@ -365,7 +369,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  struct thread *cur = thread_current ();
+  cur->priority = new_priority;
+
+  struct thread *top = list_entry(list_begin(&ready_list), struct thread, elem);
+
+  if(top->priority > cur->priority){
+    thread_yield();
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -373,6 +384,7 @@ int
 thread_get_priority (void) 
 {
   return thread_current ()->priority;
+  1;
 }
 
 /* Sets the current thread's nice value to NICE. */
