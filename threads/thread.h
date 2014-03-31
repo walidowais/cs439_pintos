@@ -101,6 +101,8 @@ struct thread
     int64_t sleep_time;
     int64_t sleep_tick;
 
+    int priority_old;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */

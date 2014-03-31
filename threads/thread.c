@@ -384,7 +384,6 @@ int
 thread_get_priority (void) 
 {
   return thread_current ()->priority;
-  1;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -504,6 +503,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
+
+  t->priority_old = priority;
 
   sema_init(&t->sema_sleep, 0);
   t->sleep_time = 0;
