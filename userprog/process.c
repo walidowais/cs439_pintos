@@ -88,6 +88,10 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  // TODO
+  while(1){
+    // do nothing
+  }
   return -1;
 }
 
@@ -221,8 +225,84 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
+  /* Set up stack. */
+  if (!setup_stack (esp))
+    goto done;
+
+  const char *temp23 = file_name;
+  void **temp81 = esp - 1;
+  void **temp = esp;
+  uint8_t size = 0;
+
+  // printf("0x%0x\n", (int) esp );
+  // set pos to end of file_name
+  while(*file_name != '\0'){
+    file_name++;
+  }
+
+  // copy arguments into stack
+  while(file_name != temp23){
+    if(*file_name == ' '){
+      *esp = '\0';
+    }
+    else{
+      *esp = *file_name;
+    }
+
+    file_name--;
+    esp--;
+  }
+
+  // copy first character not done by while loop
+  *esp = *file_name;
+  file_name--;
+  esp--;
+
+
+  void **temp18 = esp;
+  // word align
+  *esp = (uint8_t) 0;
+  esp--;
+
+  // null terminator for argv array
+  *esp = '\0';
+  esp--;
+
+  while(temp81 != temp18+1){
+    if(*temp81 == '\0'){
+      *esp = temp81 + 1;
+      size++;
+      esp--;
+    }
+    temp81--;
+  }
+
+
+  *esp = temp81;
+  size++;
+  file_name = esp;
+  esp--;
+
+  *esp = size;
+  esp--;
+
+  *esp = (uint8_t) 0;
+
+  int x;
+  for(x = 0; x < 20; x++){
+    if(*temp == '\0'){
+      printf("0x%0x :: \\0\n", (int)temp);
+    }
+    else{
+      printf("0x%0x :: %c :: 0x%0x\n", (int)temp, (char)*temp, *temp);
+    }
+    temp--;
+  }
+
+
   /* Open executable file. */
   file = filesys_open (file_name);
+  // file = filesys_open (real_name);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
@@ -301,9 +381,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
         }
     }
 
-  /* Set up stack. */
-  if (!setup_stack (esp))
-    goto done;
+  // /* Set up stack. */
+  // if (!setup_stack (esp))
+  //   goto done;
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
@@ -423,6 +503,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     }
   return true;
 }
+
+//push($)
 
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
