@@ -209,6 +209,11 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
+
+   /*
+      Added stack pushing 
+  
+   */
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
@@ -218,6 +223,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
   off_t file_ofs;
   bool success = false;
   int i;
+  
+  char *file_string = file_name;
+  int string_len = 0;
+  int size = 0;
+  bool first = true;
+
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
@@ -229,79 +240,64 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (!setup_stack (esp))
     goto done;
 
-  const char *temp23 = file_name;
-  void **temp81 = esp - 1;
-  void **temp = esp;
-  uint8_t size = 0;
+  char *token, *save_ptr;
+  for(token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
+    string_len = (strlen(token) + 1);
 
-  // printf("0x%0x\n", (int) esp );
-  // set pos to end of file_name
-  while(*file_name != '\0'){
-    file_name++;
+    *esp -= (unsigned int) string_len;
+
+    strlcpy(*esp, token, string_len);
+
+    if(first){
+      file_string = *esp;
+      first = false;
+    }
+
+    size++;
   }
 
-  // copy arguments into stack
-  while(file_name != temp23){
-    if(*file_name == ' '){
-      *esp = '\0';
-    }
-    else{
-      *esp = *file_name;
-    }
+  unsigned char *arg_ptr = *esp;
+  // printf("temp arg ptr: 0x%0x\n", arg_ptr);
 
-    file_name--;
-    esp--;
+  if ((unsigned int)*esp % 4 != 0){
+    *esp -= (unsigned int)*esp % 4;
+  }
+  
+  *esp -= (unsigned char) 4;
+  memset(*esp, 0, sizeof(char *));
+
+  // *esp -= (unsigned int) 4;
+  // memcpy(*esp, arg_ptr, 8);
+
+  int temp_size;
+  for(temp_size = size; temp_size > 0; temp_size--){
+    *esp -= (unsigned int) 8;
+    // printf("copying: 0x%0x\n", arg_ptr);
+    memcpy(*esp, &arg_ptr, 8);
+
+    while((char)(*arg_ptr) != '\0'){
+      // printf("*arg_ptr: 0x%0x :: 0x%0x\n", arg_ptr, *arg_ptr);
+      arg_ptr = ((unsigned char *) arg_ptr) +1;
+    }
+    arg_ptr = ((unsigned char *) arg_ptr) +1;
   }
 
-  // copy first character not done by while loop
-  *esp = *file_name;
-  file_name--;
-  esp--;
+  // unsigned int argv = *esp;
+  // *esp -= (unsigned int) 1;
+  // memset(*esp, argv, sizeof(char **));
+
+  // *esp -= (unsigned int) 1;
+  // memset(*esp, size, sizeof(int));
+
+  // *esp -= (unsigned int) 1;
+  // memset(*esp, 0, sizeof(void *));
 
 
-  void **temp18 = esp;
-  // word align
-  *esp = (uint8_t) 0;
-  esp--;
-
-  // null terminator for argv array
-  *esp = '\0';
-  esp--;
-
-  while(temp81 != temp18+1){
-    if(*temp81 == '\0'){
-      *esp = temp81 + 1;
-      size++;
-      esp--;
-    }
-    temp81--;
-  }
-
-
-  *esp = temp81;
-  size++;
-  file_name = esp;
-  esp--;
-
-  *esp = size;
-  esp--;
-
-  *esp = (uint8_t) 0;
-
-  int x;
-  for(x = 0; x < 20; x++){
-    if(*temp == '\0'){
-      printf("0x%0x :: \\0\n", (int)temp);
-    }
-    else{
-      printf("0x%0x :: %c :: 0x%0x\n", (int)temp, (char)*temp, *temp);
-    }
-    temp--;
-  }
-
+  hex_dump(*esp, *esp, 52, true);
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  file = filesys_open (file_string);
+
   // file = filesys_open (real_name);
   if (file == NULL) 
     {
@@ -321,6 +317,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: error loading executable\n", file_name);
       goto done; 
     }
+
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
