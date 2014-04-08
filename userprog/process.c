@@ -243,7 +243,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   char *token, *save_ptr;
   for(token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
     string_len = (strlen(token) + 1);
-    printf("u_int -- %d u_char -- %d\n", (unsigned int) string_len, (unsigned char) string_len );
+    // printf("u_int -- %d u_char -- %d\n", (unsigned int) string_len, (unsigned char) string_len );
     //Unsigned char? original was unsigned int 
     *esp -= (unsigned char) string_len;
 
@@ -269,13 +269,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   // *esp -= (unsigned int) 4;
   // memcpy(*esp, arg_ptr, 8);
-
+  printf("0x%0x\n", *esp );
   int temp_size;
   for(temp_size = size; temp_size > 0; temp_size--){
    //Why is it 8?
-     *esp -= (unsigned int) 8;
+     *esp -= (unsigned int) 4;
     // printf("copying: 0x%0x\n", arg_ptr);
-    memcpy(*esp, &arg_ptr, 8);
+    memcpy(*esp, &arg_ptr, 4);
 
     while((char)(*arg_ptr) != '\0'){
       // printf("*arg_ptr: 0x%0x :: 0x%0x\n", arg_ptr, *arg_ptr);
@@ -284,18 +284,18 @@ load (const char *file_name, void (**eip) (void), void **esp)
     arg_ptr = ((unsigned char *) arg_ptr) +1;
   }
 
-  // unsigned int argv = *esp;
-  // *esp -= (unsigned int) 1;
-  // memset(*esp, argv, sizeof(char **));
+  unsigned int argv = *esp;
+  *esp -= (unsigned int) 4;
+  memset(*esp, argv, 4);
 
-  // *esp -= (unsigned int) 1;
-  // memset(*esp, size, sizeof(int));
+  *esp -= (unsigned int) 4;
+  memset(*esp, size, 4);
 
-  // *esp -= (unsigned int) 1;
-  // memset(*esp, 0, sizeof(void *));
+  *esp -= (unsigned int) 4;
+  memset(*esp, 0, 4);
 
 
-  hex_dump(*esp, *esp, 65, true);
+  hex_dump(*esp, *esp, 52, true);
 
   /* Open executable file. */
   file = filesys_open (file_string);
