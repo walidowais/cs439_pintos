@@ -260,10 +260,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
   unsigned char *arg_ptr = *esp;
   // printf("temp arg ptr: 0x%0x\n", arg_ptr);
 
+  /* Word-aligned */
   if ((unsigned int)*esp % 4 != 0){
     *esp -= (unsigned int)*esp % 4;
   }
   
+  /* Null terminator of the arguments 
+   --Argv4 for pintos example-- */
   *esp -= (unsigned char) 4;
   memset(*esp, 0, sizeof(char *));
 
@@ -286,13 +289,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   unsigned int argv = *esp;
   *esp -= (unsigned int) 4;
-  memset(*esp, argv, 4);
+  memset(*esp, argv, 1);
 
   *esp -= (unsigned int) 4;
-  memset(*esp, size, 4);
+  memset(*esp, size, 1);
 
   *esp -= (unsigned int) 4;
-  memset(*esp, 0, 4);
+  memset(*esp, 0, 1);
 
 
   hex_dump(*esp, *esp, 52, true);
