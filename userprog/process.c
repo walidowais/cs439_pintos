@@ -229,7 +229,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   int size = 0;
   bool first = true;
 
-
+  *esp = (unsigned char *) esp;
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -243,8 +243,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
   char *token, *save_ptr;
   for(token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
     string_len = (strlen(token) + 1);
-
-    *esp -= (unsigned int) string_len;
+    printf("u_int -- %d u_char -- %d\n", (unsigned int) string_len, (unsigned char) string_len );
+    //Unsigned char? original was unsigned int 
+    *esp -= (unsigned char) string_len;
 
     strlcpy(*esp, token, string_len);
 
@@ -271,7 +272,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   int temp_size;
   for(temp_size = size; temp_size > 0; temp_size--){
-    *esp -= (unsigned int) 8;
+   //Why is it 8?
+     *esp -= (unsigned int) 8;
     // printf("copying: 0x%0x\n", arg_ptr);
     memcpy(*esp, &arg_ptr, 8);
 
@@ -293,7 +295,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   // memset(*esp, 0, sizeof(void *));
 
 
-  hex_dump(*esp, *esp, 52, true);
+  hex_dump(*esp, *esp, 65, true);
 
   /* Open executable file. */
   file = filesys_open (file_string);
