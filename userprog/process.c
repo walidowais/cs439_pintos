@@ -243,7 +243,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
   char *token, *save_ptr;
   for(token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
     string_len = (strlen(token) + 1);
-    // printf("u_int -- %d u_char -- %d\n", (unsigned int) string_len, (unsigned char) string_len );
     //Unsigned char? original was unsigned int 
     *esp -= (unsigned char) string_len;
 
@@ -258,43 +257,32 @@ load (const char *file_name, void (**eip) (void), void **esp)
   }
 
   unsigned char *arg_ptr = *esp;
-  // printf("temp arg ptr: 0x%0x\n", arg_ptr);
 
   /* Word-aligned */
   if ((unsigned int)*esp % 4 != 0){
     *esp -= (unsigned int)*esp % 4;
   }
   
-  /* Null terminator of the arguments 
-   --Argv4 for pintos example-- */
+  /* Null terminator of the arguments */
   *esp -= (unsigned char) 4;
   memset(*esp, 0, sizeof(char *));
 
-  // *esp -= (unsigned int) 4;
-  // memcpy(*esp, arg_ptr, 8);
-  // printf("0x%0x\n", *esp );
   int temp_size;
   for(temp_size = size; temp_size > 0; temp_size--){
-   //Why is it 8?
-     *esp -= (unsigned int) 4;
-    // printf("copying: 0x%0x\n", arg_ptr);
-    memcpy(*esp, &arg_ptr, 4);
+     *esp -= sizeof(void *);
+    memcpy(*esp, &arg_ptr, sizeof(void *));
 
     while((char)(*arg_ptr) != '\0'){
-      // printf("*arg_ptr: 0x%0x :: 0x%0x\n", arg_ptr, *arg_ptr);
       arg_ptr = ((unsigned char *) arg_ptr) +1;
     }
     arg_ptr = ((unsigned char *) arg_ptr) +1;
   }
 
   /*So subtracting by an unsigned int doesn't really do anything, lol.*/
-  // printf("1: 0x%x\n\n", *esp);
   unsigned int argv = *esp;
   *esp -= sizeof(unsigned int);
-  // printf("2: 0x%x\n\n", *esp);
 
   memcpy(*esp, &argv, sizeof(char**));
-  // printf("3: 0x%x\n\n", *esp);
 
   *esp -= sizeof(char **);
   memcpy(*esp, &size, sizeof(size));
