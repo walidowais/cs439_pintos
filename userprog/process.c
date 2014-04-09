@@ -290,7 +290,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *esp -= sizeof(void *);
   memset(*esp, 0, sizeof(void *));
 
-  hex_dump(*esp, *esp, 52, true);
+  hex_dump(*esp, *esp, PHYS_BASE - *esp, true);
 
   /* Open executable file. */
   file = filesys_open (file_string);
