@@ -272,7 +272,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   // *esp -= (unsigned int) 4;
   // memcpy(*esp, arg_ptr, 8);
-  printf("0x%0x\n", *esp );
+  // printf("0x%0x\n", *esp );
   int temp_size;
   for(temp_size = size; temp_size > 0; temp_size--){
    //Why is it 8?
@@ -287,16 +287,20 @@ load (const char *file_name, void (**eip) (void), void **esp)
     arg_ptr = ((unsigned char *) arg_ptr) +1;
   }
 
+  /*So subtracting by an unsigned int doesn't really do anything, lol.*/
+  // printf("1: 0x%x\n\n", *esp);
   unsigned int argv = *esp;
-  *esp -= (unsigned int) 4;
-  memset(*esp, argv, 1);
+  *esp -= sizeof(unsigned int);
+  // printf("2: 0x%x\n\n", *esp);
 
-  *esp -= (unsigned int) 4;
-  memset(*esp, size, 1);
+  memcpy(*esp, &argv, sizeof(char**));
+  // printf("3: 0x%x\n\n", *esp);
 
-  *esp -= (unsigned int) 4;
-  memset(*esp, 0, 1);
+  *esp -= sizeof(char **);
+  memcpy(*esp, &size, sizeof(size));
 
+  *esp -= sizeof(void *);
+  memset(*esp, 0, sizeof(void *));
 
   hex_dump(*esp, *esp, 52, true);
 
