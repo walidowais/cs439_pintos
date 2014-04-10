@@ -199,6 +199,8 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
+  list_push_back(&thread_current()->kid_list, &t->kid_elem);
+
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
      member cannot be observed. */
@@ -509,6 +511,10 @@ init_thread (struct thread *t, const char *name, int priority)
   sema_init(&t->sema_sleep, 0);
   t->sleep_time = 0;
   t->sleep_tick = 0;
+
+  list_init (&t->kid_list);
+
+  // printf("Thread:%s\n\n\n", t->name);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

@@ -96,12 +96,15 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list_elem wait_elem;         /* Wait element. */
+    struct list_elem kid_elem;          /* Kid element. */
 
     struct semaphore sema_sleep;
     int64_t sleep_time;
     int64_t sleep_tick;
 
     int priority_old;
+
+    struct list kid_list;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

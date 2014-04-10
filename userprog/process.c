@@ -42,6 +42,7 @@ process_execute (const char *file_name)
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
+
   return tid;
 }
 
@@ -86,13 +87,35 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) //UNUSED) 
 {
-  // TODO
-  while(1){
-    // do nothing
+
+  bool found = false;
+
+  struct list_elem *e;
+  struct thread *child_thread;
+  struct thread *cur = thread_current();
+
+  for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
+       e = list_next (e))
+  {
+    struct thread *t = list_entry (e, struct thread, kid_elem);
+    if(t->tid == child_tid){
+      list_remove(&t->kid_elem);
+      child_thread = t;
+      found = true;
+    }
   }
-  return -1;
+
+  if(!found){
+    return -1;
+  }
+
+
+  while(child_thread->status != THREAD_DYING){
+  }
+
+  return 0;
 }
 
 /* Free the current process's resources. */
