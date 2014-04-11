@@ -51,7 +51,7 @@ static int write_us (int fd, const void *buffer, unsigned size){
 		putbuf(buffer, size);
 		bytes_written = size;
 	} else {
-		printf("NOT IMPLEMENTED YET.\n");
+		// printf("NOT IMPLEMENTED YET.\n");
 	}
 
 	return bytes_written;
@@ -74,6 +74,7 @@ will be returned.
 --Status of 0 indicates success
 --Nonzero values indicate errors*/
 static void exit_us (int status){
+	// printf("status: %d\n", status);
 	char *save_ptr;
 	struct thread *cur = thread_current();
 	
@@ -96,6 +97,20 @@ static int open_us (const char *file){
 	return -1; //file could not be opened
 }
 
+static bool is_valid (void *p){
+	bool valid = true;
+
+	if (p == NULL || !is_user_vaddr(p)){
+		valid = false;
+		return valid;
+	}
+	void *page = pagedir_get_page((thread_current()->pagedir), p);
+	if (page == NULL){
+		valid = false;
+		return valid;
+	}
+	return valid;
+}
 
 void
 syscall_init (void) 
@@ -107,8 +122,13 @@ static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
   uint32_t *p = f->esp;
-  // printf("system call!\n");
+  bool valid = true;
   int status;
+  // Check whether the current stack pointer is within user virtual address
+  if (!is_valid(p)){
+  	exit_us(-1);
+  }
+
 
   switch(*p){
 	  
@@ -119,6 +139,9 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  
 	  case SYS_EXIT:
   		// printf("SYS_EXIT\n");
+	  	if (!is_valid(p+1)){
+	  		exit_us(-1);
+	  	}
   		exit_us(*(p+1));
 	  	break;
 	  
