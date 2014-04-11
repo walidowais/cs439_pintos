@@ -513,6 +513,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->sleep_tick = 0;
 
   list_init (&t->kid_list);
+  list_init (&t->fd_list);
 
   // printf("Thread:%s\n\n\n", t->name);
 }

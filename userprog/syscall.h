@@ -13,7 +13,7 @@ void syscall_init (void);
 // int open_us (const char *file);
 // int filesize_us (int fd);
 // int read_us (int fd, void *buffer, unsigned int size);
-// int write_us (int fd, const void *buffer, unsigned int size);
+// static int write_us (int fd, const void *buffer, unsigned int size);
 // void seek_us (int fd, unsigned int position);
 // unsigned tell_us (int fd);
 // void close_us (int fd);
