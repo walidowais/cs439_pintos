@@ -17,6 +17,21 @@ struct filez {
 	int fd;
 };
 
+//Checks whether a given pointer is valid or not
+static bool is_valid (void *p){
+	bool valid = true;
+
+	if (p == NULL || !is_user_vaddr(p)){
+		valid = false;
+		return valid;
+	}
+	void *page = pagedir_get_page((thread_current()->pagedir), p);
+	if (page == NULL){
+		valid = false;
+		return valid;
+	}
+	return valid;
+}
 
 /*Write "size" bytes from buffer to open file "fd"
 Returns the number of bytes actually written, which may/may not
@@ -31,18 +46,9 @@ write all of "buffer" in one call to putbuf(), at least as long as
 static int write_us (int fd, const void *buffer, unsigned size){
 	//printf("fd: 0x%0x   buffer: 0x%0x    size: 0x%0x\n", fd, buffer, size);
 
-	if(buffer == NULL || !is_user_vaddr(buffer)){
-		//invalid pointer
-		printf("Invalid Pointer\n");
+	if (!is_valid(buffer)){
 		thread_exit();
 	}
-
-	void *page = pagedir_get_page((thread_current()->pagedir), buffer);
-	if(page == NULL){
-		//unmapped page
-		thread_exit();
-	}
-
 	//valid pointer
 
 	int bytes_written = 0;
@@ -56,17 +62,6 @@ static int write_us (int fd, const void *buffer, unsigned size){
 
 	return bytes_written;
 }
-
-/*
-void
-putbuf (const char *buffer, size_t n) 
-{
-  acquire_console ();
-  while (n-- > 0)
-    putchar_have_lock (*buffer++);
-  release_console ();
-}
-*/
 
 /*Terminates current user program, returning status to the kernel
 Note: If the process's parent waits for it, this is the status that
@@ -83,6 +78,29 @@ static void exit_us (int status){
   	thread_exit();
 }
 
+
+static int wait_us (pid_t pid){
+
+}
+
+
+/*Creates a new file called "file" with size of "initial_size"
+Returns true if successful, false otherwise
+-Does not open the file after created*/
+static bool create_us (const char *file, unsigned initial_size){
+
+}
+
+
+/*Deletes file called "file" 
+Returns true if successful, false otherwise
+-File can be removed regardless of if it's open or closed*/
+// printf("SYS_REMOVE\n");
+static bool remove_us (const char *file){
+
+}
+
+
 /*Opens file called "file"
 Returns nonnegative integer handle called "fd" 
 Returns -1 if file could not be opened
@@ -95,21 +113,6 @@ When a single file is opened more than once, each "open" call
 returns a new "fd"*/
 static int open_us (const char *file){	
 	return -1; //file could not be opened
-}
-
-static bool is_valid (void *p){
-	bool valid = true;
-
-	if (p == NULL || !is_user_vaddr(p)){
-		valid = false;
-		return valid;
-	}
-	void *page = pagedir_get_page((thread_current()->pagedir), p);
-	if (page == NULL){
-		valid = false;
-		return valid;
-	}
-	return valid;
 }
 
 void
@@ -128,7 +131,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   if (!is_valid(p)){
   	exit_us(-1);
   }
-
 
   switch(*p){
 	  
@@ -152,33 +154,44 @@ syscall_handler (struct intr_frame *f UNUSED)
 		Cannot return from exec until it knows whether child process successfully loaded executable
 		Note: Use appropriate synchronization*/
 	  	// printf("SYS_EXEC\n");
+	  	if (!is_valid(p+1)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 	  
 	  case SYS_WAIT:
 	  	// printf("SYS_WAIT\n");
+	  	if (!is_valid(p+1)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 	  
 	  case SYS_CREATE:
-	  	/*Creates a new file called "file" with size of "initial_size"
-		Returns true if successful, false otherwise
-		-Does not open the file after created*/
 	  	// printf("SYS_CREATE\n");
+	  	if (!is_valid(p+1) || !is_valid(p+2)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 
 	  case SYS_REMOVE:
-	  	/*Deletes file called "file" 
-		Returns true if successful, false otherwise
-		-File can be removed regardless of if it's open or closed*/
-	  	// printf("SYS_REMOVE\n");
+	  	if (!is_valid(p+1)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 
 	  case SYS_OPEN:
 	  	// printf("SYS_OPEN\n");
+	  	if (!is_valid(p+1)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 
 	  case SYS_FILESIZE:
 	  	/*Returns the size in bytes of the file open as "fd"*/
 	  	// printf("SYS_FILESIZE\n");
+	  	if (!is_valid(p+1)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 
 	  case SYS_READ:
@@ -187,10 +200,16 @@ syscall_handler (struct intr_frame *f UNUSED)
 		Returns -1 if file could not be read.
 		Note: fd-0 reads from keyboard using "input_getc()*/ 
 	  	// printf("SYS_READ\n");
+	  	if (!is_valid(p+1) || !is_valid(p+2) || !is_valid(p+3)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 
 	  case SYS_WRITE:
 	  	// printf("SYS_WRITE\n");
+	  	if (!is_valid(p+1) || !is_valid(p+2) || !is_valid(p+3)){
+	  		exit_us(-1);
+	  	}
 	  	f->eax = write_us(*(p+1), *(p+2), *(p+3));
 	  	break;
 
@@ -202,11 +221,17 @@ syscall_handler (struct intr_frame *f UNUSED)
 		Later read obtains 0 bytes, indicating end of file
 		Later write extends the file, filling unwritten gaps with 0s*/
 	  	// printf("SYS_SEEK\n");
+	  	if (!is_valid(p+1) || !is_valid(p+2)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 
 	  case SYS_TELL:
 	  	/*Returns the position of next byte to be read or written in open file "fd"*/
 	  	// printf("SYS_TELL\n");
+	  	if (!is_valid(p+1)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 
 	  case SYS_CLOSE:
@@ -215,6 +240,9 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 		Idea: Iterate through all "fd"s and call close?*/
 	  	// printf("SYS_CLOSE\n");
+	  	if (!is_valid(p+1)){
+	  		exit_us(-1);
+	  	}
 	  	break;
 
 	  default:
