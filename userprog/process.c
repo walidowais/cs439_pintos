@@ -87,7 +87,7 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid) //UNUSED) 
+process_wait (tid_t child_tid UNUSED) 
 {
 
   bool found = false;
@@ -111,10 +111,9 @@ process_wait (tid_t child_tid) //UNUSED)
     return -1;
   }
 
-
-  while(child_thread->status != THREAD_DYING){
-  }
-
+  sema_down(&child_thread->sema_alive);
+  
+  // printf("DEAD\n");
   return 0;
 }
 
@@ -313,7 +312,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *esp -= sizeof(void *);
   memset(*esp, 0, sizeof(void *));
 
-  hex_dump(*esp, *esp, PHYS_BASE - *esp, true);
+  // hex_dump(*esp, *esp, PHYS_BASE - *esp, true);
 
   /* Open executable file. */
   file = filesys_open (file_string);

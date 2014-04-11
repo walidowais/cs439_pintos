@@ -99,6 +99,7 @@ struct thread
     struct list_elem kid_elem;          /* Kid element. */
 
 
+    struct semaphore sema_alive;
     struct semaphore sema_sleep;
     int64_t sleep_time;
     int64_t sleep_tick;

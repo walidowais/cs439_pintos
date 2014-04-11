@@ -6,9 +6,11 @@ main (int argc, char **argv)
 {
   int i;
 
-  while(1){
-  	printf("Jeffy\n");
-  }
+  // printf("%d\n", argc);
+
+  for (i = 0; i < argc; i++)
+    printf ("%s ", argv[i]);
+  printf ("\n");
 
   return EXIT_SUCCESS;
 }

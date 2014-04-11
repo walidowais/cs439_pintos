@@ -323,9 +323,11 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
+
+
   intr_disable ();
   list_remove (&thread_current()->allelem);
-  thread_current ()->status = THREAD_DYING;
+  thread_current()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
 }
@@ -509,11 +511,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority_old = priority;
 
   sema_init(&t->sema_sleep, 0);
+  sema_init(&t->sema_alive, 0);
   t->sleep_time = 0;
   t->sleep_tick = 0;
 
   list_init (&t->kid_list);
   list_init (&t->fd_list);
+
 
   // printf("Thread:%s\n\n\n", t->name);
 }
