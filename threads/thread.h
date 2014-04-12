@@ -118,6 +118,9 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
   };
 
+
+
+
 struct list waiting_list;
 
 /* If false (default), use round-robin scheduler.
