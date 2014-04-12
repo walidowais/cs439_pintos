@@ -278,8 +278,41 @@ static unsigned tell_us(int fd){
 Returns number of bytes actually read_us (0 at the end of file)
 Returns -1 if file could not be read.
 Note: fd-0 reads from keyboard using "input_getc()*/ 
-// read_us(){
-// }
+static int read_us (int fd, const void *buffer, unsigned size){
+	//printf("fd: 0x%0x   buffer: 0x%0x    size: 0x%0x\n", fd, buffer, size);
+	if(!is_valid(buffer)){
+		exit_us(-1);
+	}
+
+
+	if(fd == 1 || fd < 0){
+		exit_us(-1);
+	}
+
+	int bytes_read = 0;
+	//Check if the pointers are correct
+	if (fd == 0){
+		input_getc();
+		bytes_read = 1;
+	} else {
+		bool found = false;
+
+		struct thread *cur = thread_current();
+		struct list_elem *e;
+		
+	  	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
+	    e = list_next (e)){
+	  		struct file_holder *f = list_entry (e, struct file_holder, file_elem);
+	  		
+	  		if(f->fd == fd){
+	  			found = true;
+	  			bytes_read = file_read(f->file, buffer, size);
+	  		}
+		}
+	}
+
+	return bytes_read;
+}
 
 
 /*Runs executable passed in through cmd_line, passing any given arguments
@@ -385,7 +418,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  		exit_us(-1);
 	  	}
 
-	  	//f->eax = read_us(*(p+1), *(p+2), *(p+3));
+	  	f->eax = read_us(*(p+1), *(p+2), *(p+3));
 
 	  	break;
 
