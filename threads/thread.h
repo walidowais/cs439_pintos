@@ -105,6 +105,7 @@ struct thread
     int64_t sleep_tick;
 
     int priority_old;
+    int fd_next;
 
     struct list kid_list;
     struct list fd_list; //file descriptor list
@@ -119,6 +120,14 @@ struct thread
   };
 
 
+struct file_holder{
+  int fd;
+  struct file *file;
+
+  struct list_elem file_elem;
+
+  //maybe lock/semaphore later
+};
 
 
 struct list waiting_list;

@@ -515,6 +515,7 @@ init_thread (struct thread *t, const char *name, int priority)
   sema_init(&t->sema_alive, 0);
   t->sleep_time = 0;
   t->sleep_tick = 0;
+  t->fd_next = 2;
 
   list_init (&t->kid_list);
   list_init (&t->fd_list);
