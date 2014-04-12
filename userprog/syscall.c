@@ -11,12 +11,18 @@
 #include "filesys/file.h"
 
 static void syscall_handler (struct intr_frame *);
+static bool is_valid (void *p);
+static int write_us (int fd, const void *buffer, unsigned size);
+static void exit_us (int status);
+static bool create_us (const char *file, unsigned initial_size);
+static bool remove_us (const char *file);
+static int open_us (const char *file);	
+static int filesize_us(int fd);
+static void close_us(int fd);
+static void seek_us(int fd, unsigned position);
+static unsigned tell_us(int fd);
 
-int fd = 2;
 
-struct filez {
-	int fd;
-};
 
 //Checks whether a given pointer is valid or not
 static bool is_valid (void *p){
@@ -34,18 +40,25 @@ static bool is_valid (void *p){
 	return valid;
 }
 
+
 /*Write "size" bytes from buffer to open file "fd"
 Returns the number of bytes actually written, which may/may not
 be less than size that's being passed in
-
 If you reach the end of file, return 0; indicates 
 no more bytes could be written
-
 fd-1 writes to the console. Your code to write to console should 
 write all of "buffer" in one call to putbuf(), at least as long as
 "size" is not bigger than a few hundred bytes.s*/
 static int write_us (int fd, const void *buffer, unsigned size){
 	//printf("fd: 0x%0x   buffer: 0x%0x    size: 0x%0x\n", fd, buffer, size);
+	if(!is_valid(buffer)){
+		exit_us(-1);
+	}
+
+
+	if(fd <= 0){
+		exit_us(-1);
+	}
 
 	int bytes_written = 0;
 	//Check if the pointers are correct
@@ -53,11 +66,25 @@ static int write_us (int fd, const void *buffer, unsigned size){
 		putbuf(buffer, size);
 		bytes_written = size;
 	} else {
-		// printf("NOT IMPLEMENTED YET.\n");
+		bool found = false;
+
+		struct thread *cur = thread_current();
+		struct list_elem *e;
+		
+	  	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
+	    e = list_next (e)){
+	  		struct file_holder *f = list_entry (e, struct file_holder, file_elem);
+	  		
+	  		if(f->fd == fd){
+	  			found = true;
+	  			bytes_written = file_write(f->file, buffer, size);
+	  		}
+		}
 	}
 
 	return bytes_written;
 }
+
 
 /*Terminates current user program, returning status to the kernel
 Note: If the process's parent waits for it, this is the status that
@@ -101,7 +128,6 @@ static bool remove_us (const char *file){
 /*Opens file called "file"
 Returns nonnegative integer handle called "fd" 
 Returns -1 if file could not be opened
-
 Note: fd's 0 and 1 are reserved for the console.
 	fd-0_us (STDIN_FILENO) is standard input
 	fd-1_us (STDOUT_FILENO) is standard output
@@ -135,12 +161,16 @@ static int open_us (const char *file){
 
 /*Returns the size in bytes of the file open as "fd"*/
 static int filesize_us(int fd){
+
+	if(fd <= 1){
+		exit_us(-1);
+	}
+
 	bool found = false;
 
 	struct thread *cur = thread_current();
 	struct list_elem *e;
 	
-
   	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
     e = list_next (e)){
   		struct file_holder *f = list_entry (e, struct file_holder, file_elem);
@@ -155,6 +185,9 @@ static int filesize_us(int fd){
 }
 
 
+/*Close file, "fd"
+Exiting or terminating process implicity closes all of its file descriptors
+Idea: Iterate through all "fd"s and call close?*/
 static void close_us(int fd){
 
 	if(fd <= 1){
@@ -165,7 +198,6 @@ static void close_us(int fd){
 
 	struct thread *cur = thread_current();
 	struct list_elem *e;
-	
 
   	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
     e = list_next (e)){
@@ -183,11 +215,88 @@ static void close_us(int fd){
 }
 
 
+/*Changes the next byte to be read/written in open file "fd" to "position"
+Position 0 = start of the file
+Seeking past the end of file results in error
+Later read obtains 0 bytes, indicating end of file
+Later write extends the file, filling unwritten gaps with 0s*/
+static void seek_us(int fd, unsigned position){
+	if(fd <= 1){
+		exit_us(-1);
+	}
+
+	bool found = false;
+
+	struct thread *cur = thread_current();
+	struct list_elem *e;
+
+  	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
+    e = list_next (e)){
+  		struct file_holder *f = list_entry (e, struct file_holder, file_elem);
+  		
+  		if(f->fd == fd){
+  			found = true;
+  			file_seek(f->file, position);
+  		}
+	}
+
+	if(!found){
+		exit_us(-1);
+	}
+}
+
+
+/*Returns the position of next byte to be read or written in open file "fd"*/
+static unsigned tell_us(int fd){
+	if(fd <= 1){
+		exit_us(-1);
+	}
+
+	bool found = false;
+
+	struct thread *cur = thread_current();
+	struct list_elem *e;
+	
+
+  	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
+    e = list_next (e)){
+  		struct file_holder *f = list_entry (e, struct file_holder, file_elem);
+  		
+  		if(f->fd == fd){
+  			found = true;
+  			return file_tell(f->file);
+  		}
+	}
+
+	if(!found){
+		return -1;
+	}
+}
+
+
+/*Reads "size" bytes from the open file as "fd" into the buffer
+Returns number of bytes actually read_us (0 at the end of file)
+Returns -1 if file could not be read.
+Note: fd-0 reads from keyboard using "input_getc()*/ 
+// read_us(){
+// }
+
+
+/*Runs executable passed in through cmd_line, passing any given arguments
+-Returns new process's pid
+-Returns -1_us (not a valid pid) if program cannot load or run for any reason
+Cannot return from exec until it knows whether child process successfully loaded executable
+Note: Use appropriate synchronization*/
+// exec_us(){
+// }
+
+
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
+
 
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
@@ -203,26 +312,36 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   switch(*p){	  
 	  case SYS_HALT:
+
 	  	shutdown_power_off();
+
 	  	break;
 	  
 	  case SYS_EXIT:
 	  	if (!is_valid(p+1)){
 	  		exit_us(-1);
 	  	}
+
   		exit_us(*(p+1));
+
 	  	break;
 	  
 	  case SYS_EXEC:
 	  	if (!is_valid(p+1)){
 	  		exit_us(-1);
 	  	}
+
+	  	//exec_us(*(p+1));
+
 	  	break;
 	  
 	  case SYS_WAIT:
 	  	if (!is_valid(p+1)){
 	  		exit_us(-1);
 	  	}
+
+	  	//wait_us(*(p+1));
+
 	  	break;
 	  
 	  case SYS_CREATE:
@@ -265,31 +384,45 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  	if (!is_valid(p+1) || !is_valid(p+2) || !is_valid(p+3)){
 	  		exit_us(-1);
 	  	}
+
+	  	//f->eax = read_us(*(p+1), *(p+2), *(p+3));
+
 	  	break;
 
 	  case SYS_WRITE:
 	  	if (!is_valid(p+1) || !is_valid(p+2) || !is_valid(p+3)){
 	  		exit_us(-1);
 	  	}
+
 	  	f->eax = write_us(*(p+1), *(p+2), *(p+3));
+
 	  	break;
 
 	  case SYS_SEEK:
 	  	if (!is_valid(p+1) || !is_valid(p+2)){
 	  		exit_us(-1);
 	  	}
+
+	  	seek_us(*(p+1), *(p+2));
+
 	  	break;
 
 	  case SYS_TELL:
 	  	if (!is_valid(p+1)){
 	  		exit_us(-1);
 	  	}
+
+	  	f->eax = tell_us(*(p+1));
+
 	  	break;
 
 	  case SYS_CLOSE:
 	  	if (!is_valid(p+1)){
 	  		exit_us(-1);
 	  	}
+
+	  	close_us(*(p+1));
+
 	  	break;
 
 	  default:
@@ -298,53 +431,3 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  	break;
 	}
 }
-
-
-
-//SYS_EXEC
-/*Runs executable passed in through cmd_line, passing any given arguments
--Returns new process's pid
--Returns -1_us (not a valid pid) if program cannot load or run for any reason
-Cannot return from exec until it knows whether child process successfully loaded executable
-Note: Use appropriate synchronization*/
-
-
-
-//SYS_TELL
-/*Returns the position of next byte to be read or written in open file "fd"*/
-
-
-
-//SYS_CLOSE
-/*Close file, "fd"
-Exiting or terminating process implicity closes all of its file descriptors
-
-Idea: Iterate through all "fd"s and call close?*/
-
-
-// printf("SYS_WRITE\n");
-/*Changes the next byte to be read/written in open file "fd" to "position"
-Position 0 = start of the file
-
-Seeking past the end of file results in error
-Later read obtains 0 bytes, indicating end of file
-Later write extends the file, filling unwritten gaps with 0s*/
-
-
-
-// SYS_SEEK:
-	  	/*Changes the next byte to be read/written in open file "fd" to "position"
-		Position 0 = start of the file
-
-		Seeking past the end of file results in error
-		Later read obtains 0 bytes, indicating end of file
-		Later write extends the file, filling unwritten gaps with 0s*/
-	  	// printf("SYS_SEEK\n");
-
-
-// SYS_READ:
-	  	/*Reads "size" bytes from the open file as "fd" into the buffer
-		Returns number of bytes actually read_us (0 at the end of file)
-		Returns -1 if file could not be read.
-		Note: fd-0 reads from keyboard using "input_getc()*/ 
-	  	// printf("SYS_READ\n");
