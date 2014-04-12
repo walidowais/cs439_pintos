@@ -152,7 +152,34 @@ static int filesize_us(int fd){
 	}
 
 	return -1;	
+}
 
+
+static void close_us(int fd){
+
+	if(fd <= 1){
+		exit_us(-1);
+	}
+
+	bool found = false;
+
+	struct thread *cur = thread_current();
+	struct list_elem *e;
+	
+
+  	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
+    e = list_next (e)){
+  		struct file_holder *f = list_entry (e, struct file_holder, file_elem);
+  		
+  		if(f->fd == fd){
+  			found = true;
+  			file_close(f->file);
+  		}
+	}
+
+	if(!found){
+		exit_us(-1);
+	}
 }
 
 
