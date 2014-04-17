@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "userprog/syscall.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -66,6 +67,10 @@ start_process (void *file_name_)
   palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
+  // else if(exec_counter != 0){
+  //   printf("thread: %s\n", thread_current()->name);
+  //   sema_up(&sys_sema);
+  // }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in

@@ -10,6 +10,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 
+
 static void syscall_handler (struct intr_frame *);
 static bool is_valid (void *p);
 static int write_us (int fd, const void *buffer, unsigned size);
@@ -21,7 +22,17 @@ static int filesize_us(int fd);
 static void close_us(int fd);
 static void seek_us(int fd, unsigned position);
 static unsigned tell_us(int fd);
+static int exec_us(const char *cmd_line);
+static int wait_us(int pid);
 
+
+struct process
+{
+	int pid;
+	struct thread p_thread;
+	bool alive;
+
+};
 
 
 //Checks whether a given pointer is valid or not
@@ -64,7 +75,7 @@ static int write_us (int fd, const void *buffer, unsigned size){
 	//Check if the pointers are correct
 	if (fd == 1){
 		putbuf(buffer, size);
-		bytes_written = size;
+		bytes_written = 0;
 	} else {
 		bool found = false;
 
@@ -152,6 +163,10 @@ static int open_us (const char *file){
 	fh->file = fp;
 	fh->fd = cur->fd_next;
 	cur->fd_next++;
+
+	// if(executable){
+	// 	file_deny_write(fh->file);
+	// }
 
 	list_push_back(&thread_current()->fd_list, &fh->file_elem);
 
@@ -314,14 +329,40 @@ static int read_us (int fd, const void *buffer, unsigned size){
 	return bytes_read;
 }
 
+static int wait_us(int pid){
+	return process_wait(pid);
+}
 
 /*Runs executable passed in through cmd_line, passing any given arguments
 -Returns new process's pid
 -Returns -1_us (not a valid pid) if program cannot load or run for any reason
 Cannot return from exec until it knows whether child process successfully loaded executable
 Note: Use appropriate synchronization*/
-// exec_us(){
-// }
+static int exec_us(const char *cmd_line){
+	int pid = process_execute(cmd_line);
+
+	bool found = false;
+	struct list_elem *e;
+	struct thread *child_thread;
+	struct thread *cur = thread_current();
+
+	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
+	e = list_next (e)){
+		struct thread *t = list_entry (e, struct thread, allelem);
+		if(t->tid == pid){
+		  child_thread = t;
+		  found = true;
+		}
+	}
+
+	if(!found){
+		return -1;
+	}
+
+	list_push_back(&thread_current()->kid_list, &child_thread->kid_elem);
+
+	return pid;
+}
 
 
 void
@@ -337,6 +378,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   uint32_t *p = f->esp;
   bool valid = true;
   int status;
+  sema_init(&sys_sema, 1);
+  exec_counter = 0;
 
   //check stack pointer
   if (!is_valid(p)){
@@ -364,7 +407,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  		exit_us(-1);
 	  	}
 
-	  	//exec_us(*(p+1));
+	  	exec_us(*(p+1));
 
 	  	break;
 	  
@@ -373,7 +416,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  		exit_us(-1);
 	  	}
 
-	  	//wait_us(*(p+1));
+	  	wait_us(*(p+1));
 
 	  	break;
 	  

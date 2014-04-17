@@ -3,5 +3,8 @@
 
 void syscall_init (void);
 
+struct semaphore sys_sema;
+int exec_counter;
+
 
 #endif /* userprog/syscall.h */
