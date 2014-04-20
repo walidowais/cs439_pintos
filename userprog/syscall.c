@@ -340,6 +340,9 @@ static int wait_us(int pid){
 Cannot return from exec until it knows whether child process successfully loaded executable
 Note: Use appropriate synchronization*/
 static int exec_us(const char *cmd_line){
+	if(!is_valid(cmd_line)){
+		exit_us(-1);
+	}
 	int pid = process_execute(cmd_line);
 
 	bool found = false;
