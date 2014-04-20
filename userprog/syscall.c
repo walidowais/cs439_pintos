@@ -339,31 +339,33 @@ static int wait_us(int pid){
 -Returns -1_us (not a valid pid) if program cannot load or run for any reason
 Cannot return from exec until it knows whether child process successfully loaded executable
 Note: Use appropriate synchronization*/
-// static int exec_us(const char *cmd_line){
-// 	int pid = process_execute(cmd_line);
+static int exec_us(const char *cmd_line){
+	int pid = process_execute(cmd_line);
 
-// 	bool found = false;
-// 	struct list_elem *e;
-// 	struct thread *child_thread;
-// 	struct thread *cur = thread_current();
+	bool found = false;
+	struct list_elem *e;
+	struct thread *child_thread;
+	struct thread *cur = thread_current();
+	wait_us(pid);
 
-// 	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
-// 	e = list_next (e)){
-// 		struct thread *t = list_entry (e, struct thread, allelem);
-// 		if(t->tid == pid){
-// 		  child_thread = t;
-// 		  found = true;
-// 		}
-// 	}
+	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
+	e = list_next (e)){
+		struct thread *t = list_entry (e, struct thread, allelem);
+		if(t->tid == pid){
+		  child_thread = t;
+		  found = true;
+		}
+	}
 
-// 	if(!found){
-// 		return -1;
-// 	}
+	if(!found){
+		return -1;
+	}
 
-// 	list_push_back(&thread_current()->kid_list, &child_thread->kid_elem);
+	if(thread_current()->tid != pid)
+		list_push_back(&thread_current()->kid_list, &child_thread->kid_elem);
 
-// 	return pid;
-// }
+	return pid;
+}
 
 
 void
@@ -408,7 +410,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  		exit_us(-1);
 	  	}
 
-	  	// exec_us(*(p+1));
+	  	exec_us(*(p+1));
 
 	  	break;
 	  
