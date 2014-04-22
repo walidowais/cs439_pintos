@@ -66,10 +66,10 @@ static int write_us (int fd, const void *buffer, unsigned size){
 		exit_us(-1);
 	}
 
-
 	if(fd <= 0){
 		exit_us(-1);
 	}
+
 
 	int bytes_written = 0;
 	//Check if the pointers are correct
@@ -81,6 +81,9 @@ static int write_us (int fd, const void *buffer, unsigned size){
 
 		struct thread *cur = thread_current();
 		struct list_elem *e;
+		
+		if (cur->file == NULL)
+			exit_us(0);
 		
 	  	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
 	    e = list_next (e)){
@@ -156,6 +159,7 @@ static int open_us (const char *file){
 	}
 
 	struct thread *cur = thread_current();
+	cur->file = file;
 
 	struct file_holder *fh;
 	fh = palloc_get_page(PAL_USER);

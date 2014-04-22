@@ -321,6 +321,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   file = filesys_open (file_string);
+  
 
   // file = filesys_open (real_name);
   if (file == NULL) 
@@ -410,10 +411,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *eip = (void (*) (void)) ehdr.e_entry;
 
   success = true;
-
+  t->file = file;
+  file_deny_write(file);
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  if(!success)
+    file_close (file);
   return success;
 }
 

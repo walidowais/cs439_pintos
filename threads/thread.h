@@ -5,6 +5,8 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -104,6 +106,8 @@ struct thread
     int64_t sleep_time;
     int64_t sleep_tick;
 
+    struct file *file; //new
+
     int priority_old;
     int fd_next;
 
@@ -118,6 +122,8 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+
 
 
 struct file_holder{
