@@ -140,7 +140,7 @@ kill (struct intr_frame *f)
 static void
 page_fault (struct intr_frame *f) 
 {
-
+  //checks the pointer for the bad.??? test cases
   if (f == NULL || !is_user_vaddr(f) || (f->esp) == NULL || !is_user_vaddr(f->esp))
     exit_us(-1);
 
