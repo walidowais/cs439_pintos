@@ -28,7 +28,6 @@ static void exit_us (int status){
   thread_exit();
 }
 
-
 /* Registers handlers for interrupts that can be caused by user
    programs.
 
@@ -140,9 +139,12 @@ kill (struct intr_frame *f)
 static void
 page_fault (struct intr_frame *f) 
 {
+
+
   //checks the pointer for the bad.??? test cases
   if (f == NULL || !is_user_vaddr(f) || (f->esp) == NULL || !is_user_vaddr(f->esp))
     exit_us(-1);
+
 
   bool not_present;  /* True: not-present page, false: writing r/o page. */
   bool write;        /* True: access was write, false: access was read. */
