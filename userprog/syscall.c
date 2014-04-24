@@ -235,6 +235,11 @@ static void close_us(int fd){
 }
 
 static int wait_us(int pid){
+	struct thread *cur = thread_current();
+	if (cur->wait == 1)
+		return -1;
+	cur->wait = 1;
+
   return super_value;
 }
 
@@ -242,6 +247,7 @@ static void exec_helper(int pid){
 	 struct list_elem *e;
 	 struct thread *child_thread;
 	 struct thread *cur = thread_current();
+	 cur->wait = 0;
 	 bool found = false;
 	 for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
 	       e = list_next (e))

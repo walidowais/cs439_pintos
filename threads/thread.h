@@ -108,7 +108,7 @@ struct thread
 
     struct file *file; //new
 
-
+    int wait; //nasdfasdf
     struct thread *parent_thread; //pointer to parent thread 
 
 
