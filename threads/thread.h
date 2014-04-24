@@ -108,10 +108,16 @@ struct thread
 
     struct file *file; //new
 
-    int priority_old;
-    int fd_next;
 
-    struct list kid_list;
+    struct thread *parent_thread; //pointer to parent thread 
+
+
+
+    int priority_old; 
+    int fd_next; //file descriptor in file descriptor list 
+    int exit_status; //each thread's exit status 
+
+    struct list kid_list; //each thread's children list 
     struct list fd_list; //file descriptor list
 
 #ifdef USERPROG

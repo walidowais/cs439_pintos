@@ -24,7 +24,7 @@ static void seek_us(int fd, unsigned position);
 static unsigned tell_us(int fd);
 static int exec_us(const char *cmd_line);
 static int wait_us(int pid);
-
+int super_value; 
 
 struct process
 {
@@ -106,12 +106,12 @@ will be returned.
 --Status of 0 indicates success
 --Nonzero values indicate errors*/
 static void exit_us (int status){
-	// printf("status: %d\n", status);
 	char *save_ptr;
 	struct thread *cur = thread_current();
-	
 	printf ("%s: exit(%d)\n", strtok_r(cur->name, " ", &save_ptr), status);
   	sema_up(&cur->sema_alive);
+  	cur->parent_thread->exit_status = status;
+	// super_value = status;
   	thread_exit();
 }
 
@@ -234,6 +234,34 @@ static void close_us(int fd){
 	}
 }
 
+static int wait_us(int pid){
+  return super_value;
+}
+
+static void exec_helper(int pid){
+	 struct list_elem *e;
+	 struct thread *child_thread;
+	 struct thread *cur = thread_current();
+	 bool found = false;
+	 for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
+	       e = list_next (e))
+	 {
+	   struct thread *t = list_entry (e, struct thread, kid_elem);
+	   if(t->tid == pid){
+	     list_remove(&t->kid_elem);
+	     child_thread = t;
+	     found = true;
+	   }
+	 }
+
+	 if(!found){
+	   super_value = -1;
+	 }
+
+	 sema_down(&child_thread->sema_alive);
+
+	 super_value = cur->exit_status;
+}
 
 /*Changes the next byte to be read/written in open file "fd" to "position"
 Position 0 = start of the file
@@ -293,7 +321,6 @@ static unsigned tell_us(int fd){
 	}
 }
 
-
 /*Reads "size" bytes from the open file as "fd" into the buffer
 Returns number of bytes actually read_us (0 at the end of file)
 Returns -1 if file could not be read.
@@ -334,9 +361,6 @@ static int read_us (int fd, const void *buffer, unsigned size){
 	return bytes_read;
 }
 
-static int wait_us(int pid){
-	return process_wait(pid);
-}
 
 /*Runs executable passed in through cmd_line, passing any given arguments
 -Returns new process's pid
@@ -348,12 +372,10 @@ static int exec_us(const char *cmd_line){
 		exit_us(-1);
 	}
 	int pid = process_execute(cmd_line);
-
 	bool found = false;
 	struct list_elem *e;
 	struct thread *child_thread;
 	struct thread *cur = thread_current();
-	wait_us(pid);
 
 	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
 	e = list_next (e)){
@@ -363,10 +385,13 @@ static int exec_us(const char *cmd_line){
 		  found = true;
 		}
 	}
+	exec_helper(pid);
+
 
 	if(!found){
 		return -1;
 	}
+
 
 	if(thread_current()->tid != pid)
 		list_push_back(&thread_current()->kid_list, &child_thread->kid_elem);
@@ -426,7 +451,9 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  		exit_us(-1);
 	  	}
 
-	  	wait_us(*(p+1));
+	  	f->eax = wait_us(*(p+1));
+
+	  	// printf("process id %d \n",(int) *(p+1) );
 
 	  	break;
 	  
@@ -517,3 +544,45 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  	break;
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//static int wait_us(int pid){
+	 
+// 	int x = process_wait(pid);
+// 	struct list_elem *e;
+// 	struct thread *cur = thread_current();
+// 	bool found = false;
+	
+// 	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
+// 	e = list_next (e)){
+// 		struct thread *t = list_entry (e, struct thread, allelem);
+// 		if(t->tid == pid){
+// 		  printf("helloooooo\n");
+// 		  return t->exit_status;
+// 		}
+// 	}
+
+// 	return x;
+// }

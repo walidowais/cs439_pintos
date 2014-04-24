@@ -118,7 +118,6 @@ process_wait (tid_t child_tid UNUSED)
 
   sema_down(&child_thread->sema_alive);
   
-  // printf("DEAD\n");
   return 0;
 }
 
