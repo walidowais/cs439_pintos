@@ -61,19 +61,12 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-
-  if(filesys_open(file_name) == NULL){
-    thread_exit();
-    sema_up(&thread_current()->sema_success);
-  }
-
   success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) {
+  if (!success) 
     thread_exit ();
-  }
   // else if(exec_counter != 0){
   //   printf("thread: %s\n", thread_current()->name);
   //   sema_up(&sys_sema);
@@ -417,14 +410,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   file_deny_write(file);
  done:
   /* We arrive here whether the load is successful or not. */
-  if(!success){
+  if(!success)
     file_close (file);
-    thread_current()->load_success = false;
-  }
-  else{
-    thread_current()->load_success = true;
-  }
-  sema_up(&thread_current()->sema_success);
   return success;
 }
 
