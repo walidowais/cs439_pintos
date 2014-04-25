@@ -509,6 +509,10 @@ init_thread (struct thread *t, const char *name, int priority)
 
   sema_init(&t->sema_sleep, 0);
   sema_init(&t->sema_alive, 0);
+  sema_init(&t->sema_success,0);
+
+
+  t->load_success = false;
   t->sleep_time = 0;
   t->sleep_tick = 0;
   t->fd_next = 2;

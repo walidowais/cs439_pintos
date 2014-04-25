@@ -377,26 +377,40 @@ static int exec_us(const char *cmd_line){
 	if(!is_valid(cmd_line)){
 		exit_us(-1);
 	}
+
+
+	if(open_us(cmd_line) == -1){
+		return -1;
+	}
+
 	int pid = process_execute(cmd_line);
+	sema_down(&thread_current()->sema_success);
+	printf("---%d\n",pid );
+
 	bool found = false;
 	struct list_elem *e;
 	struct thread *child_thread;
 	struct thread *cur = thread_current();
-
-	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
-	e = list_next (e)){
-		struct thread *t = list_entry (e, struct thread, allelem);
-		if(t->tid == pid){
-		  child_thread = t;
-		  found = true;
-		}
-	}
-	exec_helper(pid);
-
-
-	if(!found){
+	if(cur->load_success = false){
 		return -1;
 	}
+
+	ASSERT(cur->load_success);
+
+	// for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
+	// e = list_next (e)){
+	// 	struct thread *t = list_entry (e, struct thread, allelem);
+	// 	if(t->tid == pid){
+	// 	  child_thread = t;
+	// 	  found = true;
+	// 	}
+	// }
+	// exec_helper(pid);
+
+
+	// if(!found){
+	// 	return -1;
+	// }
 
 
 	if(thread_current()->tid != pid)

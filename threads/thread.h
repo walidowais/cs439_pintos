@@ -103,15 +103,16 @@ struct thread
 
     struct semaphore sema_alive;
     struct semaphore sema_sleep;
+    struct semaphore sema_success;
     int64_t sleep_time;
     int64_t sleep_tick;
 
     struct file *file; //new
 
-    int wait; //nasdfasdf
+    int wait; 
     struct thread *parent_thread; //pointer to parent thread 
 
-
+    bool load_success; 
 
     int priority_old; 
     int fd_next; //file descriptor in file descriptor list 
