@@ -10,6 +10,8 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 
+static struct lock rw_lock;
+
 
 static void syscall_handler (struct intr_frame *);
 static bool is_valid (void *p);
@@ -110,8 +112,8 @@ static void exit_us (int status){
 	struct thread *cur = thread_current();
 	printf ("%s: exit(%d)\n", strtok_r(cur->name, " ", &save_ptr), status);
   	sema_up(&cur->sema_alive);
-  	cur->parent_thread->exit_status = status;
-	// super_value = status;
+  	// cur->exit_status = status;
+		super_value = status;
   	thread_exit();
 }
 
@@ -243,31 +245,6 @@ static int wait_us(int pid){
   return super_value;
 }
 
-static void exec_helper(int pid){
-	 struct list_elem *e;
-	 struct thread *child_thread;
-	 struct thread *cur = thread_current();
-	 cur->wait = 0;
-	 bool found = false;
-	 for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
-	       e = list_next (e))
-	 {
-	   struct thread *t = list_entry (e, struct thread, kid_elem);
-	   if(t->tid == pid){
-	     list_remove(&t->kid_elem);
-	     child_thread = t;
-	     found = true;
-	   }
-	 }
-
-	 if(!found){
-	   super_value = -1;
-	 }
-
-	 sema_down(&child_thread->sema_alive);
-
-	 super_value = cur->exit_status;
-}
 
 /*Changes the next byte to be read/written in open file "fd" to "position"
 Position 0 = start of the file
@@ -336,17 +313,19 @@ static int read_us (int fd, const void *buffer, unsigned size){
 	if(!is_valid(buffer)){
 		exit_us(-1);
 	}
-
-
+//
+//
 	if(fd == 1 || fd < 0){
 		exit_us(-1);
 	}
 
 	int bytes_read = 0;
 	//Check if the pointers are correct
+	// lock_acquire(&rw_lock);
 	if (fd == 0){
 		input_getc();
 		bytes_read = 1;
+		// lock_release(&rw_lock);
 	} else {
 		bool found = false;
 
@@ -362,6 +341,7 @@ static int read_us (int fd, const void *buffer, unsigned size){
 	  			bytes_read = file_read(f->file, buffer, size);
 	  		}
 		}
+		// lock_release(&rw_lock);
 	}
 
 	return bytes_read;
@@ -382,6 +362,11 @@ static int exec_us(const char *cmd_line){
 	struct list_elem *e;
 	struct thread *child_thread;
 	struct thread *cur = thread_current();
+	sema_down(&cur->sema_exec);
+	
+	if(cur->load_success == false){
+		return -1;
+	}
 
 	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
 	e = list_next (e)){
@@ -391,7 +376,6 @@ static int exec_us(const char *cmd_line){
 		  found = true;
 		}
 	}
-	exec_helper(pid);
 
 
 	if(!found){
@@ -416,6 +400,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
+  lock_init (&rw_lock);
   uint32_t *p = f->esp;
   bool valid = true;
   int status;
@@ -448,7 +433,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  		exit_us(-1);
 	  	}
 
-	  	exec_us(*(p+1));
+	  	f->eax = exec_us(*(p+1));
 
 	  	break;
 	  
@@ -591,4 +576,33 @@ syscall_handler (struct intr_frame *f UNUSED)
 // 	}
 
 // 	return x;
+// }
+
+
+
+
+// static void exec_helper(int pid){
+// 	 struct list_elem *e;
+// 	 struct thread *child_thread;
+// 	 struct thread *cur = thread_current();
+// 	 cur->wait = 0;
+// 	 bool found = false;
+// 	 for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
+// 	       e = list_next (e))
+// 	 {
+// 	   struct thread *t = list_entry (e, struct thread, kid_elem);
+// 	   if(t->tid == pid){
+// 	     list_remove(&t->kid_elem);
+// 	     child_thread = t;
+// 	     found = true;
+// 	   }
+// 	 }
+
+// 	 if(!found){
+// 	   super_value = -1;
+// 	 }
+
+// 	 sema_down(&child_thread->sema_alive);
+
+// 	 super_value = cur->exit_status;
 // }

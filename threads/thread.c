@@ -208,6 +208,8 @@ thread_create (const char *name, int priority,
   kf->eip = NULL;
   kf->function = function;
   kf->aux = aux;
+  t->load_success = false; 
+
 
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
@@ -509,6 +511,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
   sema_init(&t->sema_sleep, 0);
   sema_init(&t->sema_alive, 0);
+  sema_init(&t->sema_exec, 0);
   t->sleep_time = 0;
   t->sleep_tick = 0;
   t->fd_next = 2;

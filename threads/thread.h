@@ -103,6 +103,7 @@ struct thread
 
     struct semaphore sema_alive;
     struct semaphore sema_sleep;
+    struct semaphore sema_exec;
     int64_t sleep_time;
     int64_t sleep_tick;
 
@@ -110,7 +111,7 @@ struct thread
 
     int wait; //nasdfasdf
     struct thread *parent_thread; //pointer to parent thread 
-
+    int load_success; 
 
 
     int priority_old; 

@@ -118,7 +118,7 @@ process_wait (tid_t child_tid UNUSED)
 
   sema_down(&child_thread->sema_alive);
   
-  return 0;
+  return child_thread->exit_status;
 }
 
 /* Free the current process's resources. */
@@ -412,6 +412,14 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* We arrive here whether the load is successful or not. */
   if(!success)
     file_close (file);
+  if(success == false){
+    thread_current()->parent_thread->load_success = false;
+  }
+  if(success == true){
+    thread_current()->parent_thread->load_success = true;
+  }
+
+  sema_up(&thread_current()->parent_thread->sema_exec);
   return success;
 }
 
