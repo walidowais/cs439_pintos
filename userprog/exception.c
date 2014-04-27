@@ -13,21 +13,6 @@ static long long page_fault_cnt;
 static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
 
-/*Terminates current user program, returning status to the kernel
-Note: If the process's parent waits for it, this is the status that
-will be returned. 
---Status of 0 indicates success
---Nonzero values indicate errors*/
-static void exit_us (int status){
-  // printf("status: %d\n", status);
-  char *save_ptr;
-  struct thread *cur = thread_current();
-  
-  printf ("%s: exit(%d)\n", strtok_r(cur->name, " ", &save_ptr), status);
-  sema_up(&cur->sema_alive);
-  thread_exit();
-}
-
 /* Registers handlers for interrupts that can be caused by user
    programs.
 
@@ -106,7 +91,8 @@ kill (struct intr_frame *f)
       printf ("%s: dying due to interrupt %#04x (%s).\n",
               thread_name (), f->vec_no, intr_name (f->vec_no));
       intr_dump_frame (f);
-      thread_exit (); 
+      // thread_exit ();
+      exit_us(-1); 
 
     case SEL_KCSEG:
       /* Kernel's code segment, which indicates a kernel bug.

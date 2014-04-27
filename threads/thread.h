@@ -107,9 +107,9 @@ struct thread
     int64_t sleep_time;
     int64_t sleep_tick;
 
-    struct file *file; //new
+    struct file *file; 
 
-    int wait; //nasdfasdf
+    int wait; //make sure wait runs once
     struct thread *parent_thread; //pointer to parent thread 
     int load_success; 
 

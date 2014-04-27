@@ -67,10 +67,6 @@ start_process (void *file_name_)
   palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
-  // else if(exec_counter != 0){
-  //   printf("thread: %s\n", thread_current()->name);
-  //   sema_up(&sys_sema);
-  // }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -94,31 +90,30 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-
+  // printf("im in wait\n");
   bool found = false;
 
   struct list_elem *e;
   struct thread *child_thread;
   struct thread *cur = thread_current();
+  // for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
+  //      e = list_next (e))
+  // {
+  //   struct thread *t = list_entry (e, struct thread, kid_elem);
+  //   if(t->tid == child_tid){
+  //     list_remove(&t->kid_elem);
+  //     child_thread = t;
+  //     found = true;
+  //   }
+  // }
 
-  for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
-       e = list_next (e))
-  {
-    struct thread *t = list_entry (e, struct thread, kid_elem);
-    if(t->tid == child_tid){
-      list_remove(&t->kid_elem);
-      child_thread = t;
-      found = true;
-    }
-  }
+  // if(!found){
+  //   return -1;
+  // }
 
-  if(!found){
-    return -1;
-  }
-
-  sema_down(&child_thread->sema_alive);
+  sema_down(&thread_current()->sema_alive);
   
-  return child_thread->exit_status;
+  return -1;
 }
 
 /* Free the current process's resources. */
@@ -127,6 +122,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+  
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -144,6 +140,7 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+
 }
 
 /* Sets up the CPU for running user code in the current
@@ -418,7 +415,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if(success == true){
     thread_current()->parent_thread->load_success = true;
   }
-
   sema_up(&thread_current()->parent_thread->sema_exec);
   return success;
 }

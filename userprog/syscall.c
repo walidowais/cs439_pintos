@@ -16,7 +16,6 @@ static struct lock rw_lock;
 static void syscall_handler (struct intr_frame *);
 static bool is_valid (void *p);
 static int write_us (int fd, const void *buffer, unsigned size);
-static void exit_us (int status);
 static bool create_us (const char *file, unsigned initial_size);
 static bool remove_us (const char *file);
 static int open_us (const char *file);	
@@ -33,7 +32,6 @@ struct process
 	int pid;
 	struct thread p_thread;
 	bool alive;
-
 };
 
 
@@ -107,14 +105,16 @@ Note: If the process's parent waits for it, this is the status that
 will be returned. 
 --Status of 0 indicates success
 --Nonzero values indicate errors*/
-static void exit_us (int status){
+ void exit_us (int status){
 	char *save_ptr;
 	struct thread *cur = thread_current();
+	// printf("Status: %d\n", status);
 	printf ("%s: exit(%d)\n", strtok_r(cur->name, " ", &save_ptr), status);
-  	sema_up(&cur->sema_alive);
-  	// cur->exit_status = status;
-		super_value = status;
-  	thread_exit();
+	sema_up(&cur->parent_thread->sema_alive);
+	cur->parent_thread->exit_status = status;
+	// printf("cur's status in exit function call %d \n",cur->parent_thread->exit_status );
+	super_value = status;
+	thread_exit();
 }
 
 
@@ -238,11 +238,41 @@ static void close_us(int fd){
 
 static int wait_us(int pid){
 	struct thread *cur = thread_current();
+	struct thread *child_thread;
+	struct list_elem *e;
+	bool found = false;
 	if (cur->wait == 1)
 		return -1;
 	cur->wait = 1;
+  sema_down(&cur->sema_alive);
 
-  return super_value;
+
+  // for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
+  //      e = list_next (e)){
+
+  //   struct thread *t = list_entry (e, struct thread, kid_elem);
+  //   if(t->tid == pid){
+  //     list_remove(&t->kid_elem);
+  //     child_thread = t;
+  //     found = true;
+  //   }
+  // }
+
+
+  // if(!found){
+  //   return -1;
+  // }
+
+  // printf("cur's exit status: %d \n",cur->exit_status );
+
+	
+
+  return cur->exit_status;
+	// if (cur->wait == 1)
+	// 	return -1;
+	// cur->wait = 1;
+	// // printf("Super value: %d", super_value);
+ //  return super_value;
 }
 
 
@@ -313,19 +343,19 @@ static int read_us (int fd, const void *buffer, unsigned size){
 	if(!is_valid(buffer)){
 		exit_us(-1);
 	}
-//
-//
+
+
 	if(fd == 1 || fd < 0){
 		exit_us(-1);
 	}
 
 	int bytes_read = 0;
 	//Check if the pointers are correct
-	// lock_acquire(&rw_lock);
+	lock_acquire(&rw_lock);
 	if (fd == 0){
 		input_getc();
 		bytes_read = 1;
-		// lock_release(&rw_lock);
+		lock_release(&rw_lock);
 	} else {
 		bool found = false;
 
@@ -341,7 +371,7 @@ static int read_us (int fd, const void *buffer, unsigned size){
 	  			bytes_read = file_read(f->file, buffer, size);
 	  		}
 		}
-		// lock_release(&rw_lock);
+		lock_release(&rw_lock);
 	}
 
 	return bytes_read;
@@ -357,7 +387,9 @@ static int exec_us(const char *cmd_line){
 	if(!is_valid(cmd_line)){
 		exit_us(-1);
 	}
+	lock_acquire(&rw_lock);
 	int pid = process_execute(cmd_line);
+	lock_release(&rw_lock);
 	bool found = false;
 	struct list_elem *e;
 	struct thread *child_thread;
@@ -367,24 +399,6 @@ static int exec_us(const char *cmd_line){
 	if(cur->load_success == false){
 		return -1;
 	}
-
-	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
-	e = list_next (e)){
-		struct thread *t = list_entry (e, struct thread, allelem);
-		if(t->tid == pid){
-		  child_thread = t;
-		  found = true;
-		}
-	}
-
-
-	if(!found){
-		return -1;
-	}
-
-
-	if(thread_current()->tid != pid)
-		list_push_back(&thread_current()->kid_list, &child_thread->kid_elem);
 
 	return pid;
 }
@@ -576,33 +590,4 @@ syscall_handler (struct intr_frame *f UNUSED)
 // 	}
 
 // 	return x;
-// }
-
-
-
-
-// static void exec_helper(int pid){
-// 	 struct list_elem *e;
-// 	 struct thread *child_thread;
-// 	 struct thread *cur = thread_current();
-// 	 cur->wait = 0;
-// 	 bool found = false;
-// 	 for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
-// 	       e = list_next (e))
-// 	 {
-// 	   struct thread *t = list_entry (e, struct thread, kid_elem);
-// 	   if(t->tid == pid){
-// 	     list_remove(&t->kid_elem);
-// 	     child_thread = t;
-// 	     found = true;
-// 	   }
-// 	 }
-
-// 	 if(!found){
-// 	   super_value = -1;
-// 	 }
-
-// 	 sema_down(&child_thread->sema_alive);
-
-// 	 super_value = cur->exit_status;
 // }
