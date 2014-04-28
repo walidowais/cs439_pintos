@@ -24,9 +24,9 @@ static void seek_us(int fd, unsigned position);
 static unsigned tell_us(int fd);
 static int exec_us(const char *cmd_line);
 static int wait_us(int pid);
-int super_value;
+int super_value; /*We were trying some shit with this, #wetried.*/
 
-//Checks whether a given pointer is valid or not
+/*Checks whether the address is valid.*/
 static bool is_valid (void *p){
 	bool valid = true;
 
@@ -52,22 +52,23 @@ fd-1 writes to the console. Your code to write to console should
 write all of "buffer" in one call to putbuf(), at least as long as
 "size" is not bigger than a few hundred bytes.s*/
 static int write_us (int fd, const void *buffer, unsigned size){
-	//printf("fd: 0x%0x   buffer: 0x%0x    size: 0x%0x\n", fd, buffer, size);
 	if(!is_valid(buffer)){
 		exit_us(-1);
 	}
 
+	/*Can't write to stdin, aka 0.*/
 	if(fd <= 0){
 		exit_us(-1);
 	}
 
-
 	int bytes_written = 0;
-	//Check if the pointers are correct
+
 	if (fd == 1){
 		putbuf(buffer, size);
 		bytes_written = 0;
-	} else {
+	} 
+
+	else {
 		bool found = false;
 
 		struct thread *cur = thread_current();
@@ -76,10 +77,12 @@ static int write_us (int fd, const void *buffer, unsigned size){
 		if (cur->file == NULL)
 			exit_us(0);
 		
+		/*Traversing through our list of file descriptors.*/
 	  	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
 	    e = list_next (e)){
 	  		struct file_holder *f = list_entry (e, struct file_holder, file_elem);
 	  		
+	  		/*If it's never found, we return 0 bytes written.*/
 	  		if(f->fd == fd){
 	  			found = true;
 	  			bytes_written = file_write(f->file, buffer, size);
@@ -105,7 +108,7 @@ will be returned.
 	bool found = false;
 	struct list_elem *e;
 
-	for(e = list_begin(&cur->parent_thread->kid_list); (e != list_end(&cur->parent_thread->kid_list));
+	for(e = list_begin(&cur->parent_thread->kid_list); (e != list_end(&cur->parent_thread->kid_list) && !found);
 		e = list_next(e)){
 
 		struct process *p = list_entry(e, struct process, process_elem);
@@ -240,85 +243,44 @@ static void close_us(int fd){
 	}
 }
 
-// static bool list_contains(struct thread *cur, int pid){
-// 	struct list_elem *e;
 
-// 	for(e = list_begin(&cur->kid_list); (e != list_end(&cur->kid_list));
-// 		e = list_next(e)){
-
-// 		struct process *p = list_entry(e, struct process, process_elem);
-// 		if(p->pid == pid){
-// 			// list_remove(&p->process_elem);
-// 			// free(p);
-// 			return true;
-// 		}
-// 	}
-
-// 	return false;
-// }
-
-
-/*Wait attempted codes.. */
-//searching thru kid list was breaking our code 
-	// if(!list_contains(&cur, pid)){
-	// 	return -1;
-	// }
-// for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
-  //      e = list_next (e)){
-
-  //   struct thread *t = list_entry (e, struct thread, kid_elem);
-  //   if(t->tid == pid){
-  //     list_remove(&t->kid_elem);
-  //     child_thread = t;
-  //     found = true;
-  //   }
-  // }
-
-
-  // if(!found){
-  //   return -1;
-  // }
-
-  // printf("cur's exit status: %d \n",cur->exit_status );
-
-
+/*Used a process because exit_us frees the thread, so we needed struct to hold metadata.*/
 static int wait_us(int pid){
 
 	struct thread *cur = thread_current();	
 	bool found = false;
 	struct list_elem *e;
+
+	/*Metadata for the child thread*/
 	struct process *kiddo;
-	for(e = list_begin(&cur->kid_list); (e != list_end(&cur->kid_list));
+	for(e = list_begin(&cur->kid_list); (e != list_end(&cur->kid_list) && !found);
 		e = list_next(e)){
 
 		struct process *p = list_entry(e, struct process, process_elem);
 		if(p->pid == pid){
 			kiddo = p;			
-			return p->exit_status;
-
+			found = true;
 		}
 	}
 	
+	/*If pid isn't found, then you're out.*/
 	if(!found){
 		return -1;
 	}
 
+	/*So that we don't call wait on same pid twice.*/
 	if(kiddo->wait == 1){
 		return -1;
 	}
 
+	/*Metadata for the threads.*/
 	kiddo->wait = 1; 
 
+	/*In the case that the kid is still running.*/
 	if(kiddo->alive == true)
 		sema_down(&cur->sema_alive);
 
 	return kiddo->exit_status;
-
-
-
-	// if(cur == NULL)
-	// 	return super_value;
-	// return cur->exit_status;
 }
 
 
@@ -424,15 +386,13 @@ static int read_us (int fd, const void *buffer, unsigned size){
 }
 
 
-/*Runs executable passed in through cmd_line, passing any given arguments
--Returns new process's pid
--Returns -1_us (not a valid pid) if program cannot load or run for any reason
-Cannot return from exec until it knows whether child process successfully loaded executable
-Note: Use appropriate synchronization*/
+/*Executes a process and waits on it until finishes.*/
 static int exec_us(const char *cmd_line){
 	if(!is_valid(cmd_line)){
 		exit_us(-1);
 	}
+
+	/*Call process execute for loading.*/
 	int pid = process_execute(cmd_line);
 	bool found = false;
 	struct list_elem *e;
@@ -440,15 +400,19 @@ static int exec_us(const char *cmd_line){
 	struct thread *cur = thread_current();
 	sema_down(&cur->sema_exec);
 
-	
+	/*If the load fails, we want to return -1.*/
 	if(cur->load_success == false){
 		return -1;
 	}
 
+	/*Setting attributes for the metadata.*/
 	struct process *p = malloc(sizeof(struct process));
 	p->alive = true;
 	p->pid = pid;
 	p->exit_status = -23;
+	p->wait = false;
+
+
 	list_push_back(&cur->kid_list, &p->process_elem);
 
 	return pid;
@@ -462,6 +426,7 @@ syscall_init (void)
 }
 
 
+/*A huge ass switch case for all the system calls.*/
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
@@ -472,11 +437,11 @@ syscall_handler (struct intr_frame *f UNUSED)
   sema_init(&sys_sema, 1);
   exec_counter = 0;
 
-  //check stack pointer
   if (!is_valid(p)){
   	exit_us(-1);
   }
 
+  /*We increment our pointer to take into account the parameters of each function.*/
   switch(*p){	  
 	  case SYS_HALT:
 
@@ -601,44 +566,3 @@ syscall_handler (struct intr_frame *f UNUSED)
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//static int wait_us(int pid){
-	 
-// 	int x = process_wait(pid);
-// 	struct list_elem *e;
-// 	struct thread *cur = thread_current();
-// 	bool found = false;
-	
-// 	for (e = list_begin (&all_list); (!found && e != list_end (&all_list));
-// 	e = list_next (e)){
-// 		struct thread *t = list_entry (e, struct thread, allelem);
-// 		if(t->tid == pid){
-// 		  printf("helloooooo\n");
-// 		  return t->exit_status;
-// 		}
-// 	}
-
-// 	return x;
-// }
