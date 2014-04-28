@@ -13,6 +13,9 @@ struct process
 {
 	int pid;
 	struct list_elem process_elem;
+	bool alive;
+	int exit_status;
+	bool wait; 
 };
 
 

@@ -12,8 +12,6 @@
 #include "threads/malloc.h"
 
 static struct lock rw_lock;
-
-
 static void syscall_handler (struct intr_frame *);
 static bool is_valid (void *p);
 static int write_us (int fd, const void *buffer, unsigned size);
@@ -26,8 +24,7 @@ static void seek_us(int fd, unsigned position);
 static unsigned tell_us(int fd);
 static int exec_us(const char *cmd_line);
 static int wait_us(int pid);
-int super_value; 
-
+int super_value;
 
 //Checks whether a given pointer is valid or not
 static bool is_valid (void *p){
@@ -104,9 +101,26 @@ will be returned.
 	struct thread *cur = thread_current();
 	// printf("Status: %d\n", status);
 	printf ("%s: exit(%d)\n", strtok_r(cur->name, " ", &save_ptr), status);
-	sema_up(&cur->parent_thread->sema_alive);
 	cur->parent_thread->exit_status = status;
-	// printf("cur's status in exit function call %d \n",cur->parent_thread->exit_status );
+	bool found = false;
+	struct list_elem *e;
+
+	for(e = list_begin(&cur->parent_thread->kid_list); (e != list_end(&cur->parent_thread->kid_list));
+		e = list_next(e)){
+
+		struct process *p = list_entry(e, struct process, process_elem);
+		if(p->pid == cur->tid){
+			p->alive = false;
+			p->exit_status = status;
+			found = true;
+		}
+	}
+	if(!found)
+		printf("process isn't found\n");
+	
+	// printf("sdfkjsdkljfsdklfjsldkjf\n");
+	sema_up(&cur->parent_thread->sema_alive);
+
 	super_value = status;
 	thread_exit();
 }
@@ -163,10 +177,6 @@ static int open_us (const char *file){
 	fh->file = fp;
 	fh->fd = cur->fd_next;
 	cur->fd_next++;
-
-	// if(executable){
-	// 	file_deny_write(fh->file);
-	// }
 
 	list_push_back(&thread_current()->fd_list, &fh->file_elem);
 
@@ -247,25 +257,13 @@ static void close_us(int fd){
 // 	return false;
 // }
 
-static int wait_us(int pid){
-	
-	struct thread *cur = thread_current();
-	
-	
-	if (cur->wait == 1)
-		return -1;
-	cur->wait = 1;
 
+/*Wait attempted codes.. */
+//searching thru kid list was breaking our code 
 	// if(!list_contains(&cur, pid)){
 	// 	return -1;
 	// }
-
-
-
-  	sema_down(&cur->sema_alive);
-
-
-  // for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
+// for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
   //      e = list_next (e)){
 
   //   struct thread *t = list_entry (e, struct thread, kid_elem);
@@ -283,14 +281,44 @@ static int wait_us(int pid){
 
   // printf("cur's exit status: %d \n",cur->exit_status );
 
-	
 
-  return cur->exit_status;
-	// if (cur->wait == 1)
-	// 	return -1;
-	// cur->wait = 1;
-	// // printf("Super value: %d", super_value);
- //  return super_value;
+static int wait_us(int pid){
+
+	struct thread *cur = thread_current();	
+	bool found = false;
+	struct list_elem *e;
+	struct process *kiddo;
+	for(e = list_begin(&cur->kid_list); (e != list_end(&cur->kid_list));
+		e = list_next(e)){
+
+		struct process *p = list_entry(e, struct process, process_elem);
+		if(p->pid == pid){
+			kiddo = p;			
+			return p->exit_status;
+
+		}
+	}
+	
+	if(!found){
+		return -1;
+	}
+
+	if(kiddo->wait == 1){
+		return -1;
+	}
+
+	kiddo->wait = 1; 
+
+	if(kiddo->alive == true)
+		sema_down(&cur->sema_alive);
+
+	return kiddo->exit_status;
+
+
+
+	// if(cur == NULL)
+	// 	return super_value;
+	// return cur->exit_status;
 }
 
 
@@ -405,18 +433,23 @@ static int exec_us(const char *cmd_line){
 	if(!is_valid(cmd_line)){
 		exit_us(-1);
 	}
-	lock_acquire(&rw_lock);
 	int pid = process_execute(cmd_line);
-	lock_release(&rw_lock);
 	bool found = false;
 	struct list_elem *e;
 	struct thread *child_thread;
 	struct thread *cur = thread_current();
 	sema_down(&cur->sema_exec);
+
 	
 	if(cur->load_success == false){
 		return -1;
 	}
+
+	struct process *p = malloc(sizeof(struct process));
+	p->alive = true;
+	p->pid = pid;
+	p->exit_status = -23;
+	list_push_back(&cur->kid_list, &p->process_elem);
 
 	return pid;
 }

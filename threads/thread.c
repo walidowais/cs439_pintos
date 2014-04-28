@@ -196,7 +196,7 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
   t->parent_thread = thread_current();
-  list_push_back(&thread_current()->kid_list, &t->kid_elem);
+  // list_push_back(&thread_current()->kid_list, &t->kid_elem);
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
