@@ -14,16 +14,17 @@
 static struct lock rw_lock;
 static void syscall_handler (struct intr_frame *);
 static bool is_valid (void *p);
-static int write_us (int fd, const void *buffer, unsigned size);
-static bool create_us (const char *file, unsigned initial_size);
-static bool remove_us (const char *file);
-static int open_us (const char *file);	
-static int filesize_us(int fd);
-static void close_us(int fd);
-static void seek_us(int fd, unsigned position);
-static unsigned tell_us(int fd);
-static int exec_us(const char *cmd_line);
-static int wait_us(int pid);
+static int sys_write (int fd, const void *buffer, unsigned size);
+static bool sys_create (const char *file, unsigned initial_size);
+static bool sys_remove (const char *file);
+static int sys_open (const char *file);	
+static int sys_filesize(int fd);
+static void sys_close(int fd);
+static void sys_seek(int fd, unsigned position);
+static unsigned sys_tell(int fd);
+static int sys_exec(const char *cmd_line);
+static int sys_wait(int pid);
+static int sys_read(int fd, const void *buffer, unsigned size);
 
 void
 syscall_init (void) 
@@ -44,7 +45,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   exec_counter = 0;
 
   if (!is_valid(p)){
-  	exit_us(-1);
+  	sys_exit(-1);
   }
 
   /* We increment our pointer to take into account the parameters of each function.*/
@@ -57,109 +58,109 @@ syscall_handler (struct intr_frame *f UNUSED)
 	  
 	  case SYS_EXIT:
 	  	if (!is_valid(p+1)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-  		exit_us(*(p+1));
+  		sys_exit(*(p+1));
 
 	  	break;
 	  
 	  case SYS_EXEC:
 	  	if (!is_valid(p+1)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = exec_us(*(p+1));
+	  	f->eax = sys_exec(*(p+1));
 
 	  	break;
 	  
 	  case SYS_WAIT:
 	  	if (!is_valid(p+1)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = wait_us(*(p+1));
+	  	f->eax = sys_wait(*(p+1));
 
 	  	break;
 	  
 	  case SYS_CREATE:
 	  	if (!is_valid(p+1) || !is_valid(p+2)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = create_us(*(p+1), *(p+2));
+	  	f->eax = sys_create(*(p+1), *(p+2));
 
 	  	break;
 
 	  case SYS_REMOVE:
 	  	if (!is_valid(p+1)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = remove_us(*(p+1));
+	  	f->eax = sys_remove(*(p+1));
 
 	  	break;
 
 	  case SYS_OPEN:
 	  	if (!is_valid(p+1)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = open_us(*(p+1));
+	  	f->eax = sys_open(*(p+1));
 
 	  	break;
 
 	  case SYS_FILESIZE:
 	  	if (!is_valid(p+1)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = filesize_us(*(p+1));
+	  	f->eax = sys_filesize(*(p+1));
 
 	  	break;
 
 	  case SYS_READ:
 	  	if (!is_valid(p+1) || !is_valid(p+2) || !is_valid(p+3)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = read_us(*(p+1), *(p+2), *(p+3));
+	  	f->eax = sys_read(*(p+1), *(p+2), *(p+3));
 
 	  	break;
 
 	  case SYS_WRITE:
 	  	if (!is_valid(p+1) || !is_valid(p+2) || !is_valid(p+3)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = write_us(*(p+1), *(p+2), *(p+3));
+	  	f->eax = sys_write(*(p+1), *(p+2), *(p+3));
 
 	  	break;
 
 	  case SYS_SEEK:
 	  	if (!is_valid(p+1) || !is_valid(p+2)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	seek_us(*(p+1), *(p+2));
+	  	sys_seek(*(p+1), *(p+2));
 
 	  	break;
 
 	  case SYS_TELL:
 	  	if (!is_valid(p+1)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	f->eax = tell_us(*(p+1));
+	  	f->eax = sys_tell(*(p+1));
 
 	  	break;
 
 	  case SYS_CLOSE:
 	  	if (!is_valid(p+1)){
-	  		exit_us(-1);
+	  		sys_exit(-1);
 	  	}
 
-	  	close_us(*(p+1));
+	  	sys_close(*(p+1));
 
 	  	break;
 
@@ -188,14 +189,14 @@ static bool is_valid (void *p){
 }
 
 /*Writing to a buffer.*/
-static int write_us (int fd, const void *buffer, unsigned size){
+static int sys_write (int fd, const void *buffer, unsigned size){
 	if(!is_valid(buffer)){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	/*Can't write to stdin, aka 0.*/
 	if(fd <= 0){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	int bytes_written = 0;
@@ -213,7 +214,7 @@ static int write_us (int fd, const void *buffer, unsigned size){
 		struct list_elem *e;
 		
 		if (cur->file == NULL)
-			exit_us(0);
+			sys_exit(0);
 		
 		/*Traversing through our list of file descriptors.*/
 	  	for (e = list_begin (&cur->fd_list); (e != list_end (&cur->fd_list) && !found);
@@ -234,7 +235,7 @@ static int write_us (int fd, const void *buffer, unsigned size){
 
 
 /*Terminates current user program, returning status to the kernel.*/
- void exit_us (int status){
+ void sys_exit (int status){
 /*Oh my god this code seriously took forever.*/
 	char *save_ptr;
 	struct thread *cur = thread_current();
@@ -268,10 +269,10 @@ static int write_us (int fd, const void *buffer, unsigned size){
 
 
 /*Creates a new file with size of initial_size.*/
-static bool create_us (const char *file, unsigned initial_size){
+static bool sys_create (const char *file, unsigned initial_size){
 	/*Validity check as usual.*/
 	if(!is_valid(file)){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	return filesys_create (file, initial_size); 
@@ -279,9 +280,9 @@ static bool create_us (const char *file, unsigned initial_size){
 
 
 /*Deletes file.*/
-static bool remove_us (const char *file){
+static bool sys_remove (const char *file){
 	if(!is_valid(file)){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	/*Well, this is pretty simple to understand.*/
@@ -290,9 +291,9 @@ static bool remove_us (const char *file){
 
 
 /*Opens file.*/
-static int open_us (const char *file){	
+static int sys_open (const char *file){	
 	if(!is_valid(file)){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	/*Grabs the file pointer.*/
@@ -320,10 +321,10 @@ static int open_us (const char *file){
 
 
 /*Returns the size in bytes of the file open as "fd"*/
-static int filesize_us(int fd){
+static int sys_filesize(int fd){
 
 	if(fd <= 1){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	bool found = false;
@@ -346,11 +347,11 @@ static int filesize_us(int fd){
 
 
 /*Close file descriptor.*/
-static void close_us(int fd){
+static void sys_close(int fd){
 
 	/*Can't close stdin/stdout.*/
 	if(fd <= 1){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	bool found = false;
@@ -372,13 +373,13 @@ static void close_us(int fd){
 
 	/*If not found, then you want to exit, since the fd is invalid.*/
 	if(!found){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 }
 
 
-/*Used a process because exit_us frees the thread;needed struct to hold metadata.*/
-static int wait_us(int pid){
+/*Used a process because sys_exit frees the thread;needed struct to hold metadata.*/
+static int sys_wait(int pid){
 
 	struct thread *cur = thread_current();	
 	bool found = false;
@@ -418,11 +419,11 @@ static int wait_us(int pid){
 
 
 /*Changes the next byte to be read/written in fd to position.*/
-static void seek_us(int fd, unsigned position){
+static void sys_seek(int fd, unsigned position){
 
 	/*Checking for stdin/stdout case.*/
 	if(fd <= 1){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	bool found = false;
@@ -443,16 +444,16 @@ static void seek_us(int fd, unsigned position){
 	}
 
 	if(!found){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 }
 
 
 /*Returns the position of next byte to be read/written in fd.*/
-static unsigned tell_us(int fd){
+static unsigned sys_tell(int fd){
 	/*Account for stdin/stdout cases.*/
 	if(fd <= 1){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	bool found = false;
@@ -477,14 +478,14 @@ static unsigned tell_us(int fd){
 }
 
 /*Reads "size" bytes from the open file as "fd" into the buffer.*/ 
-static int read_us (int fd, const void *buffer, unsigned size){
+static int sys_read (int fd, const void *buffer, unsigned size){
 	if(!is_valid(buffer)){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	/*Fd can't be 1 because stdout. */
 	if(fd == 1 || fd < 0){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	int bytes_read = 0;
@@ -518,9 +519,9 @@ static int read_us (int fd, const void *buffer, unsigned size){
 
 
 /*Executes a process and waits on it until finishes.*/
-static int exec_us(const char *cmd_line){
+static int sys_exec(const char *cmd_line){
 	if(!is_valid(cmd_line)){
-		exit_us(-1);
+		sys_exit(-1);
 	}
 
 	/*Call process execute for loading.*/

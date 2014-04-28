@@ -4,7 +4,7 @@
 #include <list.h>
 
 void syscall_init (void);
-void exit_us (int status);
+void sys_exit (int status);
 
 struct semaphore sys_sema;
 int exec_counter;
