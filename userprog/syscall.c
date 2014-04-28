@@ -9,6 +9,7 @@
 #include "threads/palloc.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "threads/malloc.h"
 
 static struct lock rw_lock;
 
@@ -26,13 +27,6 @@ static unsigned tell_us(int fd);
 static int exec_us(const char *cmd_line);
 static int wait_us(int pid);
 int super_value; 
-
-struct process
-{
-	int pid;
-	struct thread p_thread;
-	bool alive;
-};
 
 
 //Checks whether a given pointer is valid or not
@@ -236,15 +230,39 @@ static void close_us(int fd){
 	}
 }
 
+// static bool list_contains(struct thread *cur, int pid){
+// 	struct list_elem *e;
+
+// 	for(e = list_begin(&cur->kid_list); (e != list_end(&cur->kid_list));
+// 		e = list_next(e)){
+
+// 		struct process *p = list_entry(e, struct process, process_elem);
+// 		if(p->pid == pid){
+// 			// list_remove(&p->process_elem);
+// 			// free(p);
+// 			return true;
+// 		}
+// 	}
+
+// 	return false;
+// }
+
 static int wait_us(int pid){
+	
 	struct thread *cur = thread_current();
-	struct thread *child_thread;
-	struct list_elem *e;
-	bool found = false;
+	
+	
 	if (cur->wait == 1)
 		return -1;
 	cur->wait = 1;
-  sema_down(&cur->sema_alive);
+
+	// if(!list_contains(&cur, pid)){
+	// 	return -1;
+	// }
+
+
+
+  	sema_down(&cur->sema_alive);
 
 
   // for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
