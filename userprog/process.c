@@ -103,20 +103,6 @@ process_wait (tid_t child_tid UNUSED)
   struct list_elem *e;
   struct thread *child_thread;
   struct thread *cur = thread_current();
-  // for (e = list_begin (&cur->kid_list); (!found && e != list_end (&cur->kid_list));
-  //      e = list_next (e))
-  // {
-  //   struct thread *t = list_entry (e, struct thread, kid_elem);
-  //   if(t->tid == child_tid){
-  //     list_remove(&t->kid_elem);
-  //     child_thread = t;
-  //     found = true;
-  //   }
-  // }
-
-  // if(!found){
-  //   return -1;
-  // }
 
   sema_down(&thread_current()->sema_alive);
   

@@ -343,8 +343,11 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) {
-    // list_push_back (&ready_list, &cur->elem);
-    list_insert_ordered(&ready_list, &cur->elem, cmp_priority, NULL);
+    if(cur->priority == 31)
+      list_push_back (&ready_list, &cur->elem);
+
+    else
+      list_insert_ordered(&ready_list, &cur->elem, cmp_priority, NULL);
   }
   cur->status = THREAD_READY;
   schedule ();
@@ -373,6 +376,7 @@ void
 thread_set_priority (int new_priority) 
 {
   struct thread *cur = thread_current ();
+  cur->priority_old = cur->priority;
   cur->priority = new_priority;
 
   struct thread *top = list_entry(list_begin(&ready_list), struct thread, elem);
@@ -386,7 +390,8 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  // printf("thread get %s\n",thread_current()->name );
+  return thread_current()->priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -507,19 +512,23 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
 
+  /* This is for priority donation. */
   t->priority_old = priority;
 
+  /* These are our semaphores used for alarm clock of part 1 and wait/load for part. */
   sema_init(&t->sema_sleep, 0);
   sema_init(&t->sema_alive, 0);
   sema_init(&t->sema_exec, 0);
+
+  /* This is for checking our alarm clock and our file descriptor list. */
   t->sleep_time = 0;
   t->sleep_tick = 0;
   t->fd_next = 2;
 
+  /* Each thread has its own kid list and its own file descriptor list. */
   list_init (&t->kid_list);
   list_init (&t->fd_list);
 
-  // printf("Thread:%s\n\n\n", t->name);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

@@ -114,7 +114,7 @@ struct thread
     int load_success; 
 
 
-    int priority_old; 
+    int priority_old; //this is for our priority donation. it holds the old priority. 
     int fd_next; //file descriptor in file descriptor list 
     int exit_status; //each thread's exit status 
 
