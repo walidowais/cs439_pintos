@@ -92,7 +92,7 @@ kill (struct intr_frame *f)
               thread_name (), f->vec_no, intr_name (f->vec_no));
       intr_dump_frame (f);
       // thread_exit ();
-      sys_exit(-1); 
+      sys_exitd(-1); 
 
     case SEL_KCSEG:
       /* Kernel's code segment, which indicates a kernel bug.
@@ -129,7 +129,7 @@ page_fault (struct intr_frame *f)
 
   //checks the pointer for the bad.??? test cases
   if (f == NULL || !is_user_vaddr(f) || (f->esp) == NULL || !is_user_vaddr(f->esp))
-    sys_exit(-1);
+    sys_exitd(-1);
 
 
   bool not_present;  /* True: not-present page, false: writing r/o page. */
@@ -140,7 +140,7 @@ page_fault (struct intr_frame *f)
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
      data.  It is not necessarily the address of the instruction
-     that caused the fault (that's f->eip).
+     that caused the fault (that's f->eip).d
      See [IA32-v2a] "MOV--Move to/from Control Registers" and
      [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      (#PF)". */
