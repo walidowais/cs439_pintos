@@ -92,7 +92,7 @@ kill (struct intr_frame *f)
               thread_name (), f->vec_no, intr_name (f->vec_no));
       intr_dump_frame (f);
       // thread_exit ();
-      sys_exitd(-1); 
+      sys_exitd-1); 
 
     case SEL_KCSEG:
       /* Kernel's code segment, which indicates a kernel bug.
@@ -129,7 +129,7 @@ page_fault (struct intr_frame *f)
 
   //checks the pointer for the bad.??? test cases
   if (f == NULL || !is_user_vaddr(f) || (f->esp) == NULL || !is_user_vaddr(f->esp))
-    sys_exitd(-1);
+    sys_exit(-1);
 
 
   bool not_present;  /* True: not-present page, false: writing r/o page. */

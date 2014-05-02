@@ -214,16 +214,11 @@ lock_acquire (struct lock *lock)
   enum intr_level old_int_level = intr_disable();
 
   if(lock->semaphore.value <= 0){
-
+    // thread_current()->acquired_donate_lock = true;
     if(lock->holder->priority < thread_get_priority()){
       list_insert_ordered(&lock->holder->donate_list, &thread_current()->donate_elem, &cmp_priority, NULL);
+      lock->holder->priority = thread_get_priority();
 
-      lock->holder->priority = list_entry(list_begin(&(lock->holder->donate_list)), struct thread, donate_elem)->priority;
-
-   
-      // list_sort(&lock->holder->donate_list, &cmp_priority, NULL);
-      // lock->holder->priority_old = lock->holder->priority;
-      // lock->holder->priority = thread_get_priority();
     }
 
   }
@@ -231,6 +226,7 @@ lock_acquire (struct lock *lock)
   intr_set_level(old_int_level);
 
   sema_down (&lock->semaphore);
+  // thread_current()->acquired_donate_lock = true;
   lock->holder = thread_current ();
 }
 
@@ -247,10 +243,10 @@ lock_try_acquire (struct lock *lock)
 
   ASSERT (lock != NULL);
   ASSERT (!lock_held_by_current_thread (lock));
-
   success = sema_try_down (&lock->semaphore);
-  if (success)
+  if (success){
     lock->holder = thread_current ();
+  }
   return success;
 }
 
@@ -265,33 +261,28 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
   struct thread *cur = thread_current();
-  enum intr_level old_int_level = intr_disable();
-
-  // if(thread_get_priority() > lock->holder->priority_old){
-  //   thread_set_priority(lock->holder->priority_old);
-  // }
-
   struct thread *t = NULL;
-  
-  if(!list_empty(&lock->holder->donate_list)){
-    t = list_entry(list_pop_front(&(lock->holder->donate_list)), struct thread, donate_elem);
 
-    if(!list_empty(&(lock->holder->donate_list))){
-      thread_set_priority(list_entry(list_begin(&(lock->holder->donate_list)), struct thread, donate_elem)->priority);
-    }
-    else{
-      thread_set_priority(cur->priority_old);
+  if(thread_current()->acquired == 0){
+    
+    if(!list_empty(&lock->holder->donate_list)){ 
+      t = list_entry(list_pop_front(&(lock->holder->donate_list)), struct thread, donate_elem);
+      if(!list_empty(&lock->holder->donate_list)){
+        thread_set_priority(list_entry(list_begin(&(lock->holder->donate_list)), struct thread, donate_elem)->priority);
+      }
+      else{
+        thread_set_priority(cur->priority_old);
+      }
     }
   }
 
-
-  intr_set_level(old_int_level);
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
-  if((t != NULL) && (t->priority > cur->priority)){
+  if((t != NULL) && (t->priority > thread_get_priority()) && cur->acquired == 0){
     thread_yield();
   }
+  cur->acquired = 0;
 }
 
 /* Returns true if the current thread holds LOCK, false

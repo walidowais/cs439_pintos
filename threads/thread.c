@@ -209,8 +209,8 @@ thread_create (const char *name, int priority,
   kf->function = function;
   kf->aux = aux;
   t->load_success = false; 
-
-
+  t->acquired_donate_lock = false;
+  t-> acquired = 0;
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = (void (*) (void)) kernel_thread;
@@ -377,7 +377,7 @@ thread_set_priority (int new_priority)
 {
   struct thread *cur = thread_current ();
   cur->priority = new_priority;
-
+  list_sort(&cur->donate_list, &cmp_priority, NULL);
   struct thread *top = list_entry(list_begin(&ready_list), struct thread, elem);
 
   if(top->priority > cur->priority){

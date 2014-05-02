@@ -6,6 +6,7 @@
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
+#include "threads/thread.h"
 
 static void vprintf_helper (char, void *);
 static void putchar_have_lock (uint8_t c);
@@ -91,8 +92,11 @@ acquire_console (void)
     {
       if (lock_held_by_current_thread (&console_lock)) 
         console_lock_depth++; 
-      else
+      else{
+        thread_current()->acquired++;
+
         lock_acquire (&console_lock); 
+       } 
     }
 }
 
@@ -106,6 +110,7 @@ release_console (void)
         console_lock_depth--;
       else
         lock_release (&console_lock); 
+      
     }
 }
 

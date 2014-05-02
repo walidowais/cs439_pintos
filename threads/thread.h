@@ -110,15 +110,19 @@ struct thread
 
     struct file *file; 
 
+    bool acquired_donate_lock;
+    bool released; 
     int wait; //make sure wait runs once
     struct thread *parent_thread; //pointer to parent thread 
     int load_success; 
+    int priority_lowered; 
 
-
+    int priority_really_old; 
     int priority_old;  //this is for our priority donation. it holds the old priority. 
     int fd_next;      //file descriptor in file descriptor list 
     int exit_status; //each thread's exit status 
-
+    int acquired;
+    
     struct list donate_list; //list of threads donating priority
     struct list kid_list;   //each thread's children list 
     struct list fd_list;   //file descriptor list
