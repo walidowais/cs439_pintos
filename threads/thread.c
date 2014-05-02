@@ -267,7 +267,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   // list_push_back (&ready_list, &t->elem);
-  list_insert_ordered(&ready_list, &t->elem, cmp_priority, NULL);
+  list_insert_ordered(&ready_list, &t->elem, &cmp_priority, NULL);
 
   //printf("Thread Name: %s -- Thread Priority: %d\n", t->name, t->priority);
 
@@ -347,7 +347,7 @@ thread_yield (void)
       list_push_back (&ready_list, &cur->elem);
 
     else
-      list_insert_ordered(&ready_list, &cur->elem, cmp_priority, NULL);
+      list_insert_ordered(&ready_list, &cur->elem, &cmp_priority, NULL);
   }
   cur->status = THREAD_READY;
   schedule ();
@@ -376,7 +376,6 @@ void
 thread_set_priority (int new_priority) 
 {
   struct thread *cur = thread_current ();
-  cur->priority_old = cur->priority;
   cur->priority = new_priority;
 
   struct thread *top = list_entry(list_begin(&ready_list), struct thread, elem);
@@ -528,6 +527,7 @@ init_thread (struct thread *t, const char *name, int priority)
   /* Each thread has its own kid list and its own file descriptor list. */
   list_init (&t->kid_list);
   list_init (&t->fd_list);
+  list_init (&t->donate_list);
 
 }
 

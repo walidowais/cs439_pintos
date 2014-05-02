@@ -96,9 +96,10 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
-    struct list_elem wait_elem;         /* Wait element. */
-    struct list_elem kid_elem;          /* Kid element. */
+    struct list_elem elem;              /* List element.  */
+    struct list_elem wait_elem;         /* Wait element.  */
+    struct list_elem kid_elem;          /* Kid element.   */
+    struct list_elem donate_elem;       /* Donate element.*/
 
 
     struct semaphore sema_alive;
@@ -114,12 +115,13 @@ struct thread
     int load_success; 
 
 
-    int priority_old; //this is for our priority donation. it holds the old priority. 
-    int fd_next; //file descriptor in file descriptor list 
+    int priority_old;  //this is for our priority donation. it holds the old priority. 
+    int fd_next;      //file descriptor in file descriptor list 
     int exit_status; //each thread's exit status 
 
-    struct list kid_list; //each thread's children list 
-    struct list fd_list; //file descriptor list
+    struct list donate_list; //list of threads donating priority
+    struct list kid_list;   //each thread's children list 
+    struct list fd_list;   //file descriptor list
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
