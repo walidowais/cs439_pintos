@@ -37,6 +37,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
+  /* read/write lock for read/write synchronization? */
   lock_init (&rw_lock);
   uint32_t *p = f->esp;
   bool valid = true;

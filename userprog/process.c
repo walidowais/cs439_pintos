@@ -44,9 +44,10 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 
-
+  /* Keep a pointer to all of the newly created child processes */
   struct process *child = malloc(sizeof(struct process));
   child->pid = tid;
+  /* Add the children to the kiddy list */
   list_push_back(&thread_current()->kid_list, &child->process_elem);
 
   if (tid == TID_ERROR)
@@ -97,7 +98,6 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  // printf("im in wait\n");
   bool found = false;
 
   struct list_elem *e;
@@ -116,7 +116,6 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
   
-
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -242,6 +241,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   
   char *file_string = file_name;
   int string_len = 0;
+  /* Keep track of the number of arguments being passed */
   int size = 0;
   bool first = true;
 
@@ -256,10 +256,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (!setup_stack (esp))
     goto done;
 
+  /* Decrement the pointer by a single address value (unsigned char) */
   char *token, *save_ptr;
+  /* Delimit the passing argument accordingly */
   for(token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
     string_len = (strlen(token) + 1);
-    //Unsigned char? original was unsigned int 
     *esp -= (unsigned char) string_len;
 
     strlcpy(*esp, token, string_len);
@@ -268,7 +269,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
       file_string = *esp;
       first = false;
     }
-
     size++;
   }
 
@@ -294,7 +294,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     arg_ptr = ((unsigned char *) arg_ptr) +1;
   }
 
-  /*So subtracting by an unsigned int doesn't really do anything, lol.*/
+  /* So subtracting by an unsigned int doesn't really do anything, lol. */
   unsigned int argv = *esp;
   *esp -= sizeof(unsigned int);
 
@@ -306,6 +306,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *esp -= sizeof(void *);
   memset(*esp, 0, sizeof(void *));
 
+  /* Our hex_dump output: used for debugging purposes. Ensure stack setup correctness*/
   // hex_dump(*esp, *esp, PHYS_BASE - *esp, true);
 
   /* Open executable file. */
@@ -397,6 +398,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   success = true;
   t->file = file;
+  /* File is an executable. Must deny writing to open executable */
   file_deny_write(file);
  done:
   /* We arrive here whether the load is successful or not. */

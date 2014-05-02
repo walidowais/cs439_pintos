@@ -209,8 +209,7 @@ thread_create (const char *name, int priority,
   kf->function = function;
   kf->aux = aux;
   t->load_success = false; 
-  t->acquired_donate_lock = false;
-  t-> acquired = 0;
+  t-> acquired_by_console = 0;
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = (void (*) (void)) kernel_thread;
@@ -220,6 +219,8 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  t->priority_old_release = false;
+  t->released = false;
   intr_set_level (old_level);
 
   /* Add to run queue. */
@@ -375,6 +376,27 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  // struct thread *cur = thread_current ();
+  // if(cur->released == true){
+  //       printf("helo\n");
+
+  //   if(cur->priority_old_release == true){
+  //     cur->priority = cur->priority_old;
+  //   }
+
+  //   else
+  //     cur->priority = new_priority;
+  // }
+
+  // else{
+  //   if (new_priority < cur->priority){
+  //     cur->priority_old = new_priority;
+  //   }
+
+  //   else{
+  //     cur->priority = new_priority;
+  //   }
+  // }
   struct thread *cur = thread_current ();
   cur->priority = new_priority;
   list_sort(&cur->donate_list, &cmp_priority, NULL);
@@ -383,6 +405,7 @@ thread_set_priority (int new_priority)
   if(top->priority > cur->priority){
     thread_yield();
   }
+  
 }
 
 /* Returns the current thread's priority. */

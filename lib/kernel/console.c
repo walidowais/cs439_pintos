@@ -93,8 +93,7 @@ acquire_console (void)
       if (lock_held_by_current_thread (&console_lock)) 
         console_lock_depth++; 
       else{
-        thread_current()->acquired++;
-
+        thread_current()->acquired_by_console++;
         lock_acquire (&console_lock); 
        } 
     }
