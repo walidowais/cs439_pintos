@@ -208,8 +208,14 @@ thread_create (const char *name, int priority,
   kf->eip = NULL;
   kf->function = function;
   kf->aux = aux;
+
+  /* Set the default values for the threads */
   t->load_success = false; 
+  /* Checks whether the console has the lock - iffy implementation :( */
   t-> acquired_by_console = 0;
+  t->priority_old_release = false;
+  /* Check whether the thread has called lock_release */
+  t->released = false;
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = (void (*) (void)) kernel_thread;
@@ -219,8 +225,6 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
-  t->priority_old_release = false;
-  t->released = false;
   intr_set_level (old_level);
 
   /* Add to run queue. */
@@ -269,8 +273,6 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   // list_push_back (&ready_list, &t->elem);
   list_insert_ordered(&ready_list, &t->elem, &cmp_priority, NULL);
-
-  //printf("Thread Name: %s -- Thread Priority: %d\n", t->name, t->priority);
 
   t->status = THREAD_READY;
   intr_set_level (old_level);
@@ -324,7 +326,6 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
 
-
   intr_disable ();
   list_remove (&thread_current()->allelem);
   thread_current()->status = THREAD_DYING;
@@ -346,7 +347,6 @@ thread_yield (void)
   if (cur != idle_thread) {
     if(cur->priority == 31)
       list_push_back (&ready_list, &cur->elem);
-
     else
       list_insert_ordered(&ready_list, &cur->elem, &cmp_priority, NULL);
   }
@@ -399,13 +399,13 @@ thread_set_priority (int new_priority)
   // }
   struct thread *cur = thread_current ();
   cur->priority = new_priority;
+  /* Sort the donate_list just to ensure correct ordering*/
   list_sort(&cur->donate_list, &cmp_priority, NULL);
   struct thread *top = list_entry(list_begin(&ready_list), struct thread, elem);
-
+  /* Check the priorities and yield if needed */
   if(top->priority > cur->priority){
     thread_yield();
   }
-  
 }
 
 /* Returns the current thread's priority. */
@@ -550,6 +550,7 @@ init_thread (struct thread *t, const char *name, int priority)
   /* Each thread has its own kid list and its own file descriptor list. */
   list_init (&t->kid_list);
   list_init (&t->fd_list);
+  /* Keep a list of all the threads that donate their priorities */
   list_init (&t->donate_list);
 
 }

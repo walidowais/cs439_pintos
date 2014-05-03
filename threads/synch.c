@@ -213,13 +213,12 @@ lock_acquire (struct lock *lock)
 
   enum intr_level old_int_level = intr_disable();
 
+  /* Check whether a given thread has acquired the lock */
   if(lock->semaphore.value <= 0){
     if(lock->holder->priority < thread_get_priority()){
       list_insert_ordered(&lock->holder->donate_list, &thread_current()->donate_elem, &cmp_priority, NULL);
       lock->holder->priority = thread_get_priority();
-
     }
-
   }
 
   intr_set_level(old_int_level);
@@ -262,9 +261,12 @@ lock_release (struct lock *lock)
   struct thread *t = NULL;
   enum intr_level old_int_level = intr_disable();
 
+  /* Only enter the condition if it's not a console call */
   if(thread_current()->acquired_by_console == 0){
       cur->released = true;
+    /* Check whether there's anything on our donating list */
     if(!list_empty(&lock->holder->donate_list)){ 
+      /* Pop and store the first element in our list */
       t = list_entry(list_pop_front(&(lock->holder->donate_list)), struct thread, donate_elem);
       if(!list_empty(&lock->holder->donate_list)){
         thread_set_priority(list_entry(list_begin(&(lock->holder->donate_list)), struct thread, donate_elem)->priority);
@@ -281,9 +283,12 @@ lock_release (struct lock *lock)
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+
+  /* Yield and schedule the thread again */
   if((t != NULL) && (t->priority > thread_get_priority()) && cur->acquired_by_console == 0){
     thread_yield();
   }
+  /* Reset this value for console lock calls */
   cur->acquired_by_console = 0;
 }
 
